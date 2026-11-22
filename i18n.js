@@ -167,6 +167,7 @@ export const EN = {
   'Actions pour ce verset': 'Actions for this verse',
   'Position dans la sourate': 'Position in the surah',
   'Répéter ×{}': 'Repeat ×{}',
+  'Répéter': 'Repeat',
   'Vitesse de lecture {} fois': 'Playback speed {} times',
   'Arrêt dans {} min': 'Stops in {} min',
   'Minuteur': 'Sleep timer',

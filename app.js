@@ -791,14 +791,9 @@ function renderPlayer() {
       <div class="names"><small lang="ar" dir="rtl">${isMedinan(cur.s) ? 'سورة مدنية' : 'سورة مكية'}</small><span lang="ar" dir="rtl">${NAMES_AR[cur.s - 1]}</span><em>${isMedinan(cur.s) ? T`Médinoise` : T`Mecquoise`}</em></div><span class="fade"></span></div>
     <div class="p-bar"><button class="glass-btn" data-act="close" aria-label="${T`Fermer le lecteur`}">${I.down}</button>
       <span style="display:flex;gap:8px"><button class="glass-btn" data-act="share-surah" aria-label="${T`Partager la sourate`}">${I.share}</button><button class="glass-btn only-desk" data-act="fullscreen" aria-label="${T`Plein écran`}">${I.full}</button><button class="glass-btn" data-act="theme-cycle" aria-label="${T`Changer de thème`}">${I.moon}</button></span></div>
-    <div class="p-side">
-      <button class="round" data-act="fav" aria-pressed="${favs.has(cur.r + ':' + cur.s)}" aria-label="${favs.has(cur.r + ':' + cur.s) ? T`Retirer des favoris` : T`Ajouter aux favoris`}">${favs.has(cur.r + ':' + cur.s) ? I.heartOn : I.heart}</button>
-      ${noSync ? '' : `<button class="round" data-act="rep" aria-label="${T`Répéter chaque verset (${st.rep} fois)`}">${I.repeat}${st.rep > 1 ? `<span class="badge">${st.rep}</span>` : ''}</button>`}
-      <button class="round" data-act="flip" data-k="tr" aria-pressed="${prefs.tr}" aria-label="${T`Traduction`}">${I.bubble}</button>
-      <a class="round amber" href="#/lire/${cur.s}/${cur.i + 1}" data-act="close-go" aria-label="${T`Lire le texte`}">${I.book}</a>
-    </div>
     <div class="p-body">
-      <div class="p-title"><h1>${NAMES_LATIN[cur.s - 1]}<br><a href="#/recitateur/${r.id}" data-act="close-go" class="p-reciter">${esc(r.name)}</a></h1></div>
+      <div class="p-title"><h1>${NAMES_LATIN[cur.s - 1]}<br><a href="#/recitateur/${r.id}" data-act="close-go" class="p-reciter">${esc(r.name)}</a></h1>
+        <button class="pfav" data-act="fav" aria-pressed="${favs.has(cur.r + ':' + cur.s)}" aria-label="${favs.has(cur.r + ':' + cur.s) ? T`Retirer des favoris` : T`Ajouter aux favoris`}">${favs.has(cur.r + ':' + cur.s) ? I.heartOn : I.heart}</button></div>
       <button class="p-verse" data-act="verse" data-s="${cur.s}" data-i="${cur.i}" aria-label="${T`Actions pour ce verset`}" ${pre ? 'disabled' : ''}>${noSync ? `<span class="fr">${T`Lecture en continu · le verset en cours n’est pas suivi pour ce récitateur.`}</span>` : `<span class="arv" lang="ar" dir="rtl">${ar}</span>${prefs.ph && ph ? `<span class="ph">${esc(ph)}</span>` : ''}${prefs.tr && fr ? `<span class="fr">${esc(fr)}</span>` : ''}`}</button>
       <div>
         <div class="scrub"><span class="js-time">${noSync ? '0:00' : pre ? 'Basmala' : T`Verset ${cur.i + 1}`}</span>
@@ -813,9 +808,9 @@ function renderPlayer() {
         <button class="tside" data-act="timer" aria-pressed="${!!st.timer}" aria-label="${st.timer ? T`Arrêt dans ${st.timer} min` : T`Minuteur`}">${I.timer}${st.timer ? `<span class="badge">${st.timer}</span>` : ''}</button>
       </div>
       <div class="p-extra">
-        ${noSync ? '' : `<button class="chip only-desk" data-act="rep" aria-pressed="${st.rep > 1}">${I.repeat}${T`Répéter ×${st.rep}`}</button>`}
-        <button class="chip only-desk" data-act="flip" data-k="tr" aria-pressed="${prefs.tr}">${I.bubble}${T`Traduction`}</button>
-        <button class="chip only-desk" data-act="close-go" data-href="#/lire/${cur.s}/${cur.i + 1}">${I.book}${T`Lire`}</button>
+        ${noSync ? '' : `<button class="chip" data-act="rep" aria-pressed="${st.rep > 1}" aria-label="${T`Répéter chaque verset (${st.rep} fois)`}">${I.repeat}${st.rep > 1 ? T`Répéter ×${st.rep}` : T`Répéter`}</button>`}
+        <button class="chip" data-act="flip" data-k="tr" aria-pressed="${prefs.tr}">${I.bubble}${T`Traduction`}</button>
+        <button class="chip" data-act="close-go" data-href="#/lire/${cur.s}/${cur.i + 1}">${I.book}${T`Lire`}</button>
       </div>
     </div>`;
   progress();
