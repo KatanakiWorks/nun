@@ -10,7 +10,7 @@ const RBY = Object.fromEntries(RECITERS.map((r) => [r.id, r]));
 const BISM = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
 const BISM_FR = "Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux.";
 const hasBism = (s) => s !== 1 && s !== 9;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date().toLocaleDateString('sv-SE'); // AAAA-MM-JJ à l'heure locale (pas UTC)
 
 const ls = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
@@ -18,7 +18,7 @@ const ls = {
 };
 
 // ---------- Préférences et données locales (rien n'est envoyé) ----------
-const DEFAULTS = { theme: 'auto', reciter: 'alafasy', size: 28, font: 0, spacing: 1, tr: true, follow: true, chain: true, flow: false, followed: ['alafasy', 'husary', 'muaiqly', 'minshawi'] };
+const DEFAULTS = { theme: 'auto', reciter: 'alafasy', size: 28, font: 0, spacing: 1, tr: true, follow: true, chain: true, flow: false, pm: 3, asr: 0, followed: ['alafasy', 'husary', 'muaiqly', 'minshawi'] };
 const prefs = { ...DEFAULTS, ...ls.get('nun.prefs', {}) };
 if (!RBY[prefs.reciter]) prefs.reciter = 'alafasy';
 const savePrefs = () => ls.set('nun.prefs', prefs);
@@ -43,14 +43,21 @@ const khatmPct = () => Math.round(([...khatm].reduce((a, s) => a + VERSES[s - 1]
 const PRAYERS = [['Fajr', 'Fajr'], ['Dhuhr', 'Dhuhr'], ['Asr', 'Asr'], ['Maghrib', 'Maghrib'], ['Isha', 'Isha']];
 const dmy = (d) => `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
 const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+// Méthodes de calcul (ids aladhan). La Ligue islamique mondiale (18°/17°) est la plus suivie, y compris par la plupart des mosquées en France.
+const METHODS = [[3, 'Ligue islamique mondiale · 18°/17°'], ['auto', 'Autorité officielle du pays'], [12, 'UOIF · 12°'], [4, 'Umm al-Qura · La Mecque'], [5, 'Égypte'], [21, 'Maroc'], [19, 'Algérie'], [18, 'Tunisie'], [13, 'Turquie · Diyanet'], [2, 'ISNA · Amérique du Nord']];
 async function loadPrayer(lat, lon) {
-  const d = new Date();
-  const res = await fetch(`https://api.aladhan.com/v1/timings/${dmy(d)}?latitude=${lat}&longitude=${lon}&method=12`);
+  const d = new Date(), { pm, asr } = prefs;
+  const method = pm === 'auto' ? '' : `&method=${pm}`;
+  const res = await fetch(`https://api.aladhan.com/v1/timings/${dmy(d)}?latitude=${lat}&longitude=${lon}${method}&school=${asr}`);
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  const t = (await res.json()).data.timings;
-  prayer = { lat, lon, date: today(), t: Object.fromEntries(PRAYERS.map(([k]) => [k, t[k].slice(0, 5)])) };
+  const j = (await res.json()).data, t = j.timings;
+  if (pm !== prefs.pm || asr !== prefs.asr) return; // réglage changé pendant la requête : la plus récente l'emporte
+  prayer = { lat, lon, date: today(), pm, asr, m: j.meta.method.name, t: Object.fromEntries(PRAYERS.map(([k]) => [k, t[k].slice(0, 5)])) };
   ls.set('nun.prayer', prayer);
 }
+// Recalcule si le jour ou les réglages ont changé (corrige aussi les anciens horaires UOIF enregistrés).
+const prayerStale = () => prayer && (prayer.date !== today() || prayer.pm !== prefs.pm || prayer.asr !== prefs.asr);
+const refreshPrayer = () => loadPrayer(prayer.lat, prayer.lon).then(() => render()).catch(() => {});
 function enablePrayer() {
   if (!navigator.geolocation) return toast('La localisation n’est pas disponible sur cet appareil.');
   navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -68,7 +75,7 @@ function nextPrayer() {
   return { k: 'Fajr', l: 'Fajr', at: prayer.t.Fajr, left: 1440 - m + toMin(prayer.t.Fajr), tomorrow: true };
 }
 const leftLabel = (min) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`);
-if (prayer && prayer.date !== today()) loadPrayer(prayer.lat, prayer.lon).then(() => render()).catch(() => {});
+if (prayerStale()) refreshPrayer();
 
 const FONTS = [["'Amiri Quran', Amiri, serif", 'Amiri'], ["'Scheherazade New', serif", 'Scheherazade'], ["'Noto Naskh Arabic', serif", 'Naskh']];
 const SIZES = [24, 28, 32, 36];
@@ -411,8 +418,9 @@ function homeView() {
   const np = nextPrayer();
   const prayerCard = prayer ? `
     <section class="pcard" aria-label="Horaires de prière">
-      <div class="pnext"><small class="muted">Prochaine prière${np.tomorrow ? ' · demain' : ''}</small><b>${np.l} · ${np.at}</b><span class="pleft" id="pleft">dans ${leftLabel(np.left)}</span></div>
+      <div class="pnext"><small class="muted">Prochaine prière${np.tomorrow ? ' · demain' : ''}</small><b>${np.l} · ${np.at}</b><span class="pleft" id="pleft" data-k="${np.k}">dans ${leftLabel(np.left)}</span></div>
       <div class="prow">${PRAYERS.map(([k, l]) => `<span class="${k === np.k ? 'on' : ''}"><small>${l}</small>${prayer.t[k]}</span>`).join('')}</div>
+      <a class="pmeth" href="#/profil">${esc((METHODS.find(([v]) => v === prayer.pm && v !== 'auto') || [0, prayer.m || 'Méthode de calcul'])[1])}${prayer.asr ? ' · Asr hanafite' : ''} · <u>changer</u></a>
     </section>` : `
     <button class="pcard pask" data-act="prayer-on">
       <span><b>Horaires de prière</b><small class="muted">Active-les pour voir la prochaine prière. Le thème Auto suivra aussi Fajr et Maghrib.</small></span>
@@ -566,7 +574,11 @@ function profileView() {
       ${khatm.size ? '<button class="btn-line" data-act="khatm-reset" style="margin-top:12px">Recommencer une khatma</button>' : ''}
     </div>
     <h2 class="sec">Horaires de prière</h2>
-    ${prayer ? `<div class="swrow"><span><b>Activés</b><small>Calculés pour ta zone (méthode UOIF). Ta position arrondie reste sur l'appareil.</small></span><button class="btn-line" data-act="prayer-off">Désactiver</button></div>` : `<div class="swrow"><span><b>Désactivés</b><small>Nūn demande ta position une seule fois, l'arrondit, puis calcule les horaires.</small></span><button class="btn-line" data-act="prayer-on">Activer</button></div>`}
+    ${prayer ? `<div class="swrow"><span><b>Activés</b><small>Ta position arrondie reste sur l'appareil.</small></span><button class="btn-line" data-act="prayer-off">Désactiver</button></div>
+    <p class="lbl">Méthode de calcul · choisis celle de ta mosquée</p>
+    <select class="field pselect" id="pm" aria-label="Méthode de calcul">${METHODS.map(([v, l]) => `<option value="${v}" ${prefs.pm === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <p class="lbl">Heure du Asr</p>
+    <div class="seg" role="radiogroup" aria-label="Heure du Asr">${[[0, 'Standard'], [1, 'Hanafite']].map(([v, l]) => `<button role="radio" aria-checked="${prefs.asr === v}" data-act="set" data-k="asr" data-v="${v}">${l}</button>`).join('')}</div>` : `<div class="swrow"><span><b>Désactivés</b><small>Nūn demande ta position une seule fois, l'arrondit, puis calcule les horaires.</small></span><button class="btn-line" data-act="prayer-on">Activer</button></div>`}
     <h2 class="sec">Marque-pages</h2>
     ${mk.length ? `<ul class="list">${mk.map(([s, i]) => `<li><a class="srow" href="#/lire/${s}/${i + 1}"><span class="n">${s}:${i + 1}</span><span class="t"><b>${NAMES_LATIN[s - 1]}</b><small>verset ${i + 1}</small></span><span class="ar" lang="ar" dir="rtl">${NAMES_AR[s - 1]}</span></a></li>`).join('')}</ul>` : '<p class="muted" style="font-size:14px">Touche un verset dans Lire puis « Marquer » pour le retrouver ici.</p>'}
     <h2 class="sec">Apparence</h2>
@@ -831,6 +843,7 @@ document.addEventListener('click', async (e) => {
       const v = d.v === 'true' ? true : d.v === 'false' ? false : /^\d+$/.test(d.v) ? +d.v : d.v;
       prefs[d.k] = v;
       savePrefs();
+      if (prayerStale()) refreshPrayer();
       if ($('#layer .sheet')) { renderSheet(); fillRead(); $(`#layer [data-k="${d.k}"][data-v="${d.v}"]`)?.focus(); } else render();
       break;
     }
@@ -899,9 +912,17 @@ window.addEventListener('hashchange', () => { closeSheet(); render(); if (!/^#\/
 window.addEventListener('pagehide', () => ls.set('nun.stats', stats));
 setInterval(() => {
   if (prefs.theme === 'auto') applyTheme();
+  if (prayerStale()) return refreshPrayer(); // minuit passé : horaires du nouveau jour
   const np = nextPrayer(), el = $('#pleft');
-  if (np && el) el.textContent = `dans ${leftLabel(np.left)}`;
+  if (np && el) { if (el.dataset.k !== np.k) render(); else el.textContent = `dans ${leftLabel(np.left)}`; }
 }, 60000);
+document.addEventListener('change', (e) => {
+  if (e.target.id !== 'pm') return;
+  prefs.pm = /^\d+$/.test(e.target.value) ? +e.target.value : e.target.value;
+  savePrefs();
+  toast('Recalcul des horaires…');
+  refreshPrayer();
+});
 render();
 
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {

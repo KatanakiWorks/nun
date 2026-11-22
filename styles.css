@@ -362,3 +362,6 @@ h2.two { font-size: 28px; letter-spacing: -.9px; }
 .hits span { font-size: 15px; line-height: 1.5; color: var(--muted); }
 .hits mark { background: var(--soft); color: var(--ink); border-radius: 4px; padding: 0 2px; }
 .pask > span:first-child { flex: 1; display: flex; flex-direction: column; gap: 2px; } .pask small { font-size: 12px; line-height: 1.4; }
+.pmeth { display: block; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.pmeth u { color: var(--accent); text-decoration: none; font-weight: 600; }
+.pselect { width: 100%; color: var(--ink); font: inherit; font-size: 15px; border: 0; appearance: auto; }
