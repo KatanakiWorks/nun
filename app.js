@@ -33,7 +33,7 @@ const ls = {
 
 // ---------- Préférences et données locales (rien n'est envoyé) ----------
 const UI0 = (navigator.language || 'fr').toLowerCase().startsWith('fr') ? 'fr' : 'en';
-const DEFAULTS = { ui: UI0, theme: 'auto', reciter: 'alafasy', size: 28, font: 0, spacing: 1, tr: true, follow: true, chain: true, flow: false, method: 'auto', asr: 0, tune: {}, tl: UI0 === 'en' ? 'en.sahih' : 'fr.hamidullah', ph: false, tajwid: false, rate: 1, followed: ['alafasy', 'husary', 'muaiqly', 'minshawi'] };
+const DEFAULTS = { ui: UI0, theme: 'auto', reciter: 'alafasy', size: 28, font: 0, spacing: 1, tr: true, follow: true, chain: true, flow: false, method: 'auto', asr: 0, tune: {}, tl: UI0 === 'en' ? 'en.sahih' : 'fr.hamidullah', ph: false, tajwid: false, rate: 1, cont: false, followed: ['alafasy', 'husary', 'muaiqly', 'minshawi'] };
 const prefs = { ...DEFAULTS, ...ls.get('nun.prefs', {}) };
 const lang = () => LANGS.find(([id]) => id === prefs.tl) || LANGS[0];
 // Langue de l'interface (français ou anglais). T traduit un gabarit étiqueté ou un texte : la clé est le texte français, {} pour chaque valeur.
@@ -194,7 +194,7 @@ let curP = 0;
 const A = () => players[curP];
 const blobUrls = [null, null];
 let preKey = null;
-const st = { r: null, s: 1, i: 0, pre: false, rep: 1, repLeft: 1, timer: 0, timerId: 0, verses: null, vs: 0, open: false };
+const st = { r: null, s: 1, i: 0, pre: false, rep: 1, repLeft: 1, timer: 0, timerId: 0, verses: null, vs: 0, open: false, cont: false, tm: null };
 const audioUrl = (r, s, a) => `https://everyayah.com/data/${RBY[r].folder}/${pad3(s)}${pad3(a)}.mp3`;
 const keyOf = (pre, s, i) => `${st.r}:${pre ? 'b' : s + ':' + i}`;
 
@@ -206,6 +206,25 @@ async function loadInto(k, u) {
   } catch { /* cache illisible : on lit en ligne */ }
   players[k].src = u;
 }
+// ---------- Audio en continu (cdn.mp3quran.net : une sourate = un fichier, avec l'horaire de chaque verset) ----------
+const fullUrl = (r, s) => `https://cdn.mp3quran.net/audio/${RBY[r].full}/${pad3(s)}.mp3`;
+const timingCache = new Map();
+// Début et fin de chaque verset, en secondes ; null si le récitateur n'a pas d'horaires ou s'ils ne collent pas au texte.
+function getTimings(r, s) {
+  const id = RBY[r].read;
+  if (!id) return Promise.resolve(null);
+  const k = id + ':' + s;
+  if (!timingCache.has(k)) {
+    const p = fetch(`https://www.mp3quran.net/api/v3/ayat_timing?surah=${s}&read=${id}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('HTTP ' + res.status))))
+      .then((j) => { const t = j.filter((x) => x.ayah >= 1).sort((a, b) => a.ayah - b.ayah).map((x) => ({ a: x.start_time / 1000, b: x.end_time / 1000 })); return t.length === VERSES[s - 1] ? t : null; });
+    timingCache.set(k, p);
+    p.catch(() => timingCache.delete(k));
+  }
+  return timingCache.get(k).catch(() => null);
+}
+const contOn = (r) => prefs.cont && !!RBY[r].full;
+const dlKey = (r, s) => (contOn(r) ? `${r}:${s}:c` : `${r}:${s}`); // les deux formats audio se téléchargent séparément
 // La vitesse est remise à zéro à chaque changement de source : on la réapplique.
 const applyRate = () => players.forEach((p) => { p.defaultPlaybackRate = prefs.rate; p.playbackRate = prefs.rate; });
 players.forEach((p) => p.addEventListener('loadedmetadata', applyRate));
@@ -259,12 +278,55 @@ function play(r, s, i = 0) {
   preKey = null;
   const s0 = st.s;
   getSurah(s0).then((v) => { st.verses = v; st.vs = s0; sync(); }).catch(() => {});
-  startAyah();
+  st.cont = contOn(st.r);
+  st.tm = null;
+  if (st.cont) startSurah(); else startAyah();
+}
+
+async function startSurah() {
+  const token = (startAyah.n = (startAyah.n || 0) + 1);
+  const { r, s, i } = st;
+  players.forEach((p) => p.pause());
+  const [, tm] = await Promise.all([loadInto(curP, fullUrl(r, s)), getTimings(r, s)]);
+  if (token !== startAyah.n) return; // une autre sourate a été demandée entre-temps
+  st.tm = tm;
+  st.pre = !(i > 0 && tm) && hasBism(s);
+  try { A().currentTime = i > 0 && tm ? tm[i].a : 0; } catch { /* pas encore chargé */ }
+  A().play().catch(() => sync());
+  last = { r, s, i: st.i };
+  ls.set('nun.last', last);
+  sync();
+  updateMedia();
+}
+// Suit le verset en cours dans l'enregistrement continu, et gère la répétition d'un verset.
+function contTick(t) {
+  const tm = st.tm;
+  if (!tm) return;
+  if (!st.pre && st.repLeft > 1 && t >= tm[st.i].b - 0.05) { st.repLeft--; A().currentTime = tm[st.i].a; return; }
+  let idx = -1;
+  while (idx + 1 < tm.length && tm[idx + 1].a <= t + 0.05) idx++;
+  const pre = idx < 0 && hasBism(st.s);
+  const i = Math.max(0, idx);
+  if (pre === st.pre && i === st.i) return;
+  if (i > st.i) { stats.verses++; saveStats(); }
+  st.pre = pre; st.i = i; st.repLeft = st.rep;
+  last = { r: st.r, s: st.s, i };
+  ls.set('nun.last', last);
+  sync();
+  updateMedia();
 }
 
 function goAyah(i) {
   if (!st.r) return;
   const n = VERSES[st.s - 1];
+  if (st.cont) {
+    if (i >= n && st.tm) { finishSurah(st.s); return nextSurah(); }
+    if (st.tm) { A().currentTime = i < 0 ? 0 : st.tm[i].a; st.repLeft = st.rep; if (A().paused) A().play().catch(() => {}); return; }
+    // Sans horaires de versets : précédent / suivant changent de sourate.
+    if (i > st.i) return st.s < 114 ? play(st.r, st.s + 1) : undefined;
+    if (A().currentTime > 3 || st.s === 1) { A().currentTime = 0; return; }
+    return play(st.r, st.s - 1);
+  }
   if (i < 0) { st.i = 0; st.pre = hasBism(st.s); }
   else if (i >= n) { finishSurah(st.s); return nextSurah(); }
   else { st.i = i; st.pre = false; }
@@ -285,6 +347,7 @@ let lastT = 0;
 players.forEach((p) => {
   p.addEventListener('ended', () => {
     if (p !== A()) return;
+    if (st.cont) { stats.verses++; saveStats(); finishSurah(st.s); return nextSurah(); }
     if (!st.pre) { stats.verses++; saveStats(); }
     if (st.pre) { st.pre = false; return startAyah(); }
     if (st.repLeft > 1) { st.repLeft--; p.currentTime = 0; p.play().catch(() => {}); return; }
@@ -295,6 +358,7 @@ players.forEach((p) => {
   p.addEventListener('timeupdate', () => {
     if (p !== A()) return;
     const t = p.currentTime;
+    if (st.cont) contTick(t);
     if (!p.paused && t > lastT && t - lastT < 2) { stats.days[today()] = (stats.days[today()] || 0) + (t - lastT); }
     lastT = t;
     progress();
@@ -327,7 +391,7 @@ function updateMedia() {
   if (!('mediaSession' in navigator) || !st.r) return;
   const r = RBY[st.r];
   const art = r.photo ? { src: new URL(r.photo, location.href).href, sizes: '512x512', type: 'image/webp' } : { src: new URL('icons/icon-512.png', location.href).href, sizes: '512x512', type: 'image/png' };
-  navigator.mediaSession.metadata = new MediaMetadata({ title: T`${NAMES_LATIN[st.s - 1]} · verset ${st.i + 1}`, artist: r.name, album: 'Nūn', artwork: [art] });
+  navigator.mediaSession.metadata = new MediaMetadata({ title: st.cont && !st.tm ? NAMES_LATIN[st.s - 1] : T`${NAMES_LATIN[st.s - 1]} · verset ${st.i + 1}`, artist: r.name, album: 'Nūn', artwork: [art] });
 }
 if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
@@ -409,12 +473,15 @@ function toggleMark(s, i) {
 
 // ---------- Téléchargements hors-ligne ----------
 async function download(r, s, btn) {
-  const key = r + ':' + s;
+  const key = dlKey(r, s);
   if (downloaded.has(key)) return toast(T('Déjà disponible hors-ligne.'));
   if (!('caches' in window)) return toast(T('Le téléchargement n’est pas disponible ici (il faut une adresse https).'));
   const urls = [];
-  if (hasBism(s)) urls.push(audioUrl(r, 1, 1));
-  for (let a = 1; a <= VERSES[s - 1]; a++) urls.push(audioUrl(r, s, a));
+  if (contOn(r)) { urls.push(fullUrl(r, s)); getTimings(r, s); } // les horaires sont gardés par le service worker
+  else {
+    if (hasBism(s)) urls.push(audioUrl(r, 1, 1));
+    for (let a = 1; a <= VERSES[s - 1]; a++) urls.push(audioUrl(r, s, a));
+  }
   try {
     const cache = await caches.open('nun-audio');
     let done = 0;
@@ -511,7 +578,7 @@ function surahRows(r, q) {
     const latin = NAMES_LATIN[n - 1], ar = NAMES_AR[n - 1];
     if (needle && !latin.toLowerCase().includes(needle) && String(n) !== needle && !ar.includes(q.trim())) continue;
     const on = st.r === r && st.s === n;
-    const done = downloaded.has(r + ':' + n);
+    const done = downloaded.has(dlKey(r, n));
     rows.push(`<li>
       <button class="srow ${on ? 'on' : ''}" data-act="play" data-r="${r}" data-s="${n}" aria-label="${T`Écouter ${latin}, sourate ${n}`}">
         <span class="n">${n}</span><span class="t"><b>${latin}</b><small>${T`${VERSES[n - 1]} versets`}</small></span><span class="ar" lang="ar" dir="rtl">${ar}</span>
@@ -654,6 +721,7 @@ function profileView() {
     <h2 class="sec">${T`Voix par défaut`}</h2>
     <div class="voices hide-sb" role="radiogroup" aria-label="${T`Voix par défaut`}">${RECITERS.map((r) => `<button class="voice" role="radio" aria-checked="${prefs.reciter === r.id}" data-act="set" data-k="reciter" data-v="${r.id}"><span class="av" style="--tone:${r.tone}">${r.photo ? `<img src="${r.photo}" alt="">` : ''}</span>${esc(r.short)}</button>`).join('')}</div>
     <h2 class="sec">${T`Écoute et lecture`}</h2>
+    ${sw('cont', T`Audio en continu`, T`La sourate en un seul enregistrement, sans coupure entre les versets`)}
     ${sw('chain', T`Enchaîner les sourates`, T`Dans l'ordre du Coran`)}
     ${sw('follow', T`Suivre la récitation`, T`Le verset récité est mis en avant dans Lire`)}
     ${sw('tr', T`Traduction`, lang()[1])}
@@ -685,7 +753,7 @@ function renderDock(route) {
     <div class="mini" ${cur ? '' : 'hidden'}>
       ${cur ? `<button class="open" data-act="open" aria-label="${T`Ouvrir le lecteur`}"></button>
       ${surahArt(cur.s)}
-      <span class="t"><b>${T`${NAMES_LATIN[cur.s - 1]} · verset ${cur.i + 1}`}</b><small>${esc(RBY[cur.r].name)}</small></span>
+      <span class="t"><b>${st.r && st.cont && !st.tm ? NAMES_LATIN[cur.s - 1] : T`${NAMES_LATIN[cur.s - 1]} · verset ${cur.i + 1}`}</b><small>${esc(RBY[cur.r].name)}</small></span>
       <span class="ctrls"><button data-act="prev" aria-label="${T`Verset précédent`}">${I.prev}</button><button class="pp" data-act="toggle" aria-label="${playing ? T`Pause` : T`Lancer la lecture`}">${playing ? I.pause : I.play}</button><button data-act="next" aria-label="${T`Verset suivant`}">${I.next}</button></span>
       <button class="pp" data-act="toggle" aria-label="${playing ? T`Pause` : T`Lancer la lecture`}">${playing ? I.pause : I.play}</button>
       <button class="imm only-desk" data-act="open">${I.full}${T`Immersion`}</button>
@@ -704,6 +772,7 @@ function renderPlayer() {
   const v = st.verses && st.vs === cur.s ? st.verses[cur.i] : null;
   if (!v) getSurah(cur.s).then((vs) => { st.verses = vs; st.vs = cur.s; if (st.open) renderPlayer(); }).catch(() => {});
   const pre = st.r && st.pre;
+  const noSync = st.r && st.cont && !st.tm; // enregistrement continu sans horaires de versets
   const ar = pre ? esc(BISM) : v ? arHtml(v) : '…';
   const fr = pre ? lang()[2] : v ? v.fr : '';
   const ph = pre ? BISM_PH : v ? v.ph : '';
@@ -722,11 +791,11 @@ function renderPlayer() {
     </div>
     <div class="p-body">
       <div class="p-title"><h1>${NAMES_LATIN[cur.s - 1]}<br><a href="#/recitateur/${r.id}" data-act="close-go" class="p-reciter">${esc(r.name)}</a></h1></div>
-      <button class="p-verse" data-act="verse" data-s="${cur.s}" data-i="${cur.i}" aria-label="${T`Actions pour ce verset`}" ${pre ? 'disabled' : ''}><span class="arv" lang="ar" dir="rtl">${ar}</span>${prefs.ph && ph ? `<span class="ph">${esc(ph)}</span>` : ''}${prefs.tr && fr ? `<span class="fr">${esc(fr)}</span>` : ''}</button>
+      <button class="p-verse" data-act="verse" data-s="${cur.s}" data-i="${cur.i}" aria-label="${T`Actions pour ce verset`}" ${pre ? 'disabled' : ''}>${noSync ? `<span class="fr">${T`Lecture en continu · le verset en cours n’est pas suivi pour ce récitateur.`}</span>` : `<span class="arv" lang="ar" dir="rtl">${ar}</span>${prefs.ph && ph ? `<span class="ph">${esc(ph)}</span>` : ''}${prefs.tr && fr ? `<span class="fr">${esc(fr)}</span>` : ''}`}</button>
       <div>
-        <div class="scrub"><span>${pre ? 'Basmala' : T`Verset ${cur.i + 1}`}</span>
+        <div class="scrub"><span class="js-time">${noSync ? '0:00' : pre ? 'Basmala' : T`Verset ${cur.i + 1}`}</span>
           <span class="track" data-act="seek" role="slider" tabindex="0" aria-label="${T`Position dans la sourate`}" aria-valuemin="1" aria-valuemax="${n}" aria-valuenow="${cur.i + 1}"><span class="fill js-fill"></span><span class="knob js-knob"></span></span>
-          <span>${n}</span></div>
+          <span class="js-dur">${noSync ? '' : n}</span></div>
       </div>
       <div class="transport">
         <button data-act="prev" aria-label="${T`Verset précédent`}">${I.prev}</button>
@@ -865,7 +934,13 @@ function progress() {
   const n = VERSES[cur.s - 1];
   const p = A();
   const part = st.r && p.duration ? p.currentTime / p.duration : 0;
-  const pct = Math.min(100, ((cur.i + (st.pre ? 0 : part)) / n) * 100);
+  // En continu, la barre suit le temps réel de l'enregistrement.
+  const pct = st.r && st.cont ? part * 100 : Math.min(100, ((cur.i + (st.pre ? 0 : part)) / n) * 100);
+  if (st.r && st.cont && !st.tm) {
+    const mmss = (x) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`;
+    $$('.js-time').forEach((el) => { el.textContent = mmss(p.currentTime || 0); });
+    $$('.js-dur').forEach((el) => { el.textContent = p.duration ? mmss(p.duration) : ''; });
+  }
   $$('.js-fill').forEach((el) => { el.style.width = pct + '%'; });
   $$('.js-knob').forEach((el) => { el.style.left = pct + '%'; });
 }
@@ -936,6 +1011,7 @@ document.addEventListener('click', async (e) => {
     case 'seek': {
       if (!st.r) break;
       const rect = el.getBoundingClientRect();
+      if (st.cont) { if (A().duration) A().currentTime = ((e.clientX - rect.left) / rect.width) * A().duration; break; }
       goAyah(Math.floor(((e.clientX - rect.left) / rect.width) * VERSES[st.s - 1]));
       break;
     }
@@ -982,6 +1058,7 @@ document.addEventListener('click', async (e) => {
     case 'flip':
       prefs[d.k] = !prefs[d.k];
       savePrefs();
+      if (d.k === 'cont' && st.r) play(st.r, st.s, st.i); // on reprend au même verset dans le nouveau format
       if ($('#layer .sheet')) { renderSheet(); fillRead(); $(`#layer [data-k="${d.k}"]`)?.focus(); }
       else if (st.open) renderPlayer();
       else render();

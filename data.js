@@ -2,32 +2,33 @@
 
 // Chaque récitateur garde sa couleur, en thème clair comme en sombre.
 // L'audio vient d'everyayah.com (un fichier par verset) : https://everyayah.com/data/<dossier>/SSSAAA.mp3
+// full : dossier des sourates complètes sur cdn.mp3quran.net (audio en continu) · read : identifiant des horaires de chaque verset (absent = pas d'horaires).
 export const RECITERS = [
-  { id: 'alafasy', name: 'Mishary Rashid Alafasy', short: 'Alafasy', ar: 'مشاري راشد العفاسي', country: 'Koweït', tone: '#1f5e5a', photo: 'portraits/alafasy.webp', folder: 'Alafasy_128kbps' },
-  { id: 'abdulbasit', name: 'Abdul Basit Abdus Samad', short: 'Abdul Basit', ar: 'عبد الباسط عبد الصمد', country: 'Égypte', tone: '#8a4a24', photo: 'portraits/abdulbasit.webp', folder: 'Abdul_Basit_Murattal_192kbps' },
-  { id: 'husary', name: 'Mahmoud Khalil Al-Husary', short: 'Al-Husary', ar: 'محمود خليل الحصري', country: 'Égypte', tone: '#2f3a7a', photo: 'portraits/husary.webp', folder: 'Husary_128kbps' },
-  { id: 'muaiqly', name: 'Maher Al-Muaiqly', short: 'Al-Muaiqly', ar: 'ماهر المعيقلي', country: 'Arabie saoudite', tone: '#7a3550', photo: 'portraits/muaiqly.webp', folder: 'MaherAlMuaiqly128kbps' },
-  { id: 'dosari', name: 'Yasser Al-Dosari', short: 'Al-Dosari', ar: 'ياسر الدوسري', country: 'Arabie saoudite', tone: '#4f5a2a', photo: 'portraits/dosari.webp', folder: 'Yasser_Ad-Dussary_128kbps' },
-  { id: 'ghamdi', name: 'Saad Al-Ghamdi', short: 'Al-Ghamdi', ar: 'سعد الغامدي', country: 'Arabie saoudite', tone: '#2c4f6e', photo: 'portraits/ghamdi.webp', folder: 'Ghamadi_40kbps' },
-  { id: 'minshawi', name: 'Mohamed Siddiq Al-Minshawi', short: 'Al-Minshawi', ar: 'محمد صديق المنشاوي', country: 'Égypte', tone: '#4e2d62', photo: 'portraits/minshawi.webp', folder: 'Minshawy_Murattal_128kbps' },
-  { id: 'sudais', name: 'Abdul Rahman Al-Sudais', short: 'As-Sudais', ar: 'عبد الرحمن السديس', country: 'Arabie saoudite', tone: '#6b4a1f', photo: 'portraits/sudais.webp', folder: 'Abdurrahmaan_As-Sudais_192kbps' },
-  { id: 'shuraim', name: 'Saud Al-Shuraim', short: 'Ash-Shuraim', ar: 'سعود الشريم', country: 'Arabie saoudite', tone: '#3d5a4a', photo: 'portraits/shuraim.webp', folder: 'Saood_ash-Shuraym_128kbps' },
-  { id: 'qatami', name: 'Nasser Al-Qatami', short: 'Al-Qatami', ar: 'ناصر القطامي', country: 'Arabie saoudite', tone: '#5a2d3e', photo: 'portraits/qatami.webp', folder: 'Nasser_Alqatami_128kbps' },
-  { id: 'ajmi', name: 'Ahmed Al-Ajmi', short: 'Al-Ajmi', ar: 'أحمد بن علي العجمي', country: 'Arabie saoudite', tone: '#24506b', photo: 'portraits/ajmi.webp', folder: 'ahmed_ibn_ali_al_ajamy_128kbps' },
-  { id: 'hudhaify', name: 'Ali Al-Hudhaify', short: 'Al-Hudhaify', ar: 'علي الحذيفي', country: 'Arabie saoudite', tone: '#55452a', photo: 'portraits/hudhaify.webp', folder: 'Hudhaify_128kbps' },
-  { id: 'juhany', name: 'Abdullah Awad Al-Juhany', short: 'Al-Juhany', ar: 'عبد الله عواد الجهني', country: 'Arabie saoudite', tone: '#2f5a5a', photo: 'portraits/juhany.webp', folder: 'Abdullaah_3awwaad_Al-Juhaynee_128kbps' },
-  { id: 'jibreel', name: 'Muhammad Jibreel', short: 'Jibreel', ar: 'محمد جبريل', country: 'Égypte', tone: '#3a2f6b', photo: 'portraits/jibreel.webp', folder: 'Muhammad_Jibreel_128kbps' },
-  { id: 'shatri', name: 'Abu Bakr Ash-Shatri', short: 'Ash-Shatri', ar: 'أبو بكر الشاطري', country: 'Arabie saoudite', tone: '#3b4a6b', photo: null, folder: 'Abu_Bakr_Ash-Shaatree_128kbps' },
-  { id: 'rifai', name: 'Hani Ar-Rifai', short: 'Ar-Rifai', ar: 'هاني الرفاعي', country: 'Arabie saoudite', tone: '#6b3b5a', photo: null, folder: 'Hani_Rifai_192kbps' },
-  { id: 'abbad', name: 'Fares Abbad', short: 'Fares Abbad', ar: 'فارس عباد', country: 'Arabie saoudite', tone: '#2d5a3d', photo: null, folder: 'Fares_Abbad_64kbps' },
-  { id: 'ayyub', name: 'Muhammad Ayyub', short: 'Ayyub', ar: 'محمد أيوب', country: 'Arabie saoudite', tone: '#5a4a2d', photo: null, folder: 'Muhammad_Ayyoub_128kbps' },
-  { id: 'budair', name: 'Salah Al-Budair', short: 'Al-Budair', ar: 'صلاح البدير', country: 'Arabie saoudite', tone: '#2d3d5a', photo: 'portraits/budair.webp', folder: 'Salah_Al_Budair_128kbps' },
-  { id: 'jaber', name: 'Ali Jaber', short: 'Ali Jaber', ar: 'علي جابر', country: 'Arabie saoudite', tone: '#5a2d2d', photo: 'portraits/jaber.webp', folder: 'Ali_Jaber_64kbps' },
-  { id: 'basfar', name: 'Abdullah Basfar', short: 'Basfar', ar: 'عبد الله بصفر', country: 'Arabie saoudite', tone: '#2d5a55', photo: null, folder: 'Abdullah_Basfar_192kbps' },
-  { id: 'qahtani', name: 'Khalid Al-Qahtani', short: 'Al-Qahtani', ar: 'خالد القحطاني', country: 'Arabie saoudite', tone: '#6b552d', photo: null, folder: 'Khaalid_Abdullaah_al-Qahtaanee_192kbps' },
-  { id: 'banna', name: 'Mahmoud Ali Al-Banna', short: 'Al-Banna', ar: 'محمود علي البنا', country: 'Égypte', tone: '#4a2d5a', photo: 'portraits/banna.webp', folder: 'Mahmoud_Ali_Al_Banna_32kbps' },
-  { id: 'tablawi', name: 'Mohamed Al-Tablawi', short: 'At-Tablawi', ar: 'محمد محمود الطبلاوي', country: 'Égypte', tone: '#3d2d4a', photo: null, folder: 'Mohammad_al_Tablaway_128kbps' },
-  { id: 'mustafaismail', name: 'Mustafa Ismail', short: 'Mustafa Ismail', ar: 'مصطفى إسماعيل', country: 'Égypte', tone: '#6b2f2f', photo: 'portraits/mustafaismail.webp', folder: 'Mustafa_Ismail_48kbps' }
+  { id: 'alafasy', name: 'Mishary Rashid Alafasy', short: 'Alafasy', ar: 'مشاري راشد العفاسي', country: 'Koweït', tone: '#1f5e5a', photo: 'portraits/alafasy.webp', folder: 'Alafasy_128kbps', full: 'mishary-alafasy/r1', read: 123 },
+  { id: 'abdulbasit', name: 'Abdul Basit Abdus Samad', short: 'Abdul Basit', ar: 'عبد الباسط عبد الصمد', country: 'Égypte', tone: '#8a4a24', photo: 'portraits/abdulbasit.webp', folder: 'Abdul_Basit_Murattal_192kbps', full: 'abdulbasit-abdulsamad/r3', read: 53 },
+  { id: 'husary', name: 'Mahmoud Khalil Al-Husary', short: 'Al-Husary', ar: 'محمود خليل الحصري', country: 'Égypte', tone: '#2f3a7a', photo: 'portraits/husary.webp', folder: 'Husary_128kbps', full: 'mahmoud-husary/r1', read: 118 },
+  { id: 'muaiqly', name: 'Maher Al-Muaiqly', short: 'Al-Muaiqly', ar: 'ماهر المعيقلي', country: 'Arabie saoudite', tone: '#7a3550', photo: 'portraits/muaiqly.webp', folder: 'MaherAlMuaiqly128kbps', full: 'maher-muaiqly/r1' },
+  { id: 'dosari', name: 'Yasser Al-Dosari', short: 'Al-Dosari', ar: 'ياسر الدوسري', country: 'Arabie saoudite', tone: '#4f5a2a', photo: 'portraits/dosari.webp', folder: 'Yasser_Ad-Dussary_128kbps', full: 'yasser-dosari/r1', read: 92 },
+  { id: 'ghamdi', name: 'Saad Al-Ghamdi', short: 'Al-Ghamdi', ar: 'سعد الغامدي', country: 'Arabie saoudite', tone: '#2c4f6e', photo: 'portraits/ghamdi.webp', folder: 'Ghamadi_40kbps', full: 'saad-ghamdi/r1', read: 30 },
+  { id: 'minshawi', name: 'Mohamed Siddiq Al-Minshawi', short: 'Al-Minshawi', ar: 'محمد صديق المنشاوي', country: 'Égypte', tone: '#4e2d62', photo: 'portraits/minshawi.webp', folder: 'Minshawy_Murattal_128kbps', full: 'muhammad-minshawi/r1', read: 112 },
+  { id: 'sudais', name: 'Abdul Rahman Al-Sudais', short: 'As-Sudais', ar: 'عبد الرحمن السديس', country: 'Arabie saoudite', tone: '#6b4a1f', photo: 'portraits/sudais.webp', folder: 'Abdurrahmaan_As-Sudais_192kbps', full: 'abdulrahman-sudais/r1', read: 54 },
+  { id: 'shuraim', name: 'Saud Al-Shuraim', short: 'Ash-Shuraim', ar: 'سعود الشريم', country: 'Arabie saoudite', tone: '#3d5a4a', photo: 'portraits/shuraim.webp', folder: 'Saood_ash-Shuraym_128kbps', full: 'saud-shuraim/r1', read: 31 },
+  { id: 'qatami', name: 'Nasser Al-Qatami', short: 'Al-Qatami', ar: 'ناصر القطامي', country: 'Arabie saoudite', tone: '#5a2d3e', photo: 'portraits/qatami.webp', folder: 'Nasser_Alqatami_128kbps', full: 'nasser-qatami/r1', read: 86 },
+  { id: 'ajmi', name: 'Ahmed Al-Ajmi', short: 'Al-Ajmi', ar: 'أحمد بن علي العجمي', country: 'Arabie saoudite', tone: '#24506b', photo: 'portraits/ajmi.webp', folder: 'ahmed_ibn_ali_al_ajamy_128kbps', full: 'ahmad-ajmi/r1', read: 5 },
+  { id: 'hudhaify', name: 'Ali Al-Hudhaify', short: 'Al-Hudhaify', ar: 'علي الحذيفي', country: 'Arabie saoudite', tone: '#55452a', photo: 'portraits/hudhaify.webp', folder: 'Hudhaify_128kbps', full: 'ali-hudhaifi/r1', read: 74 },
+  { id: 'juhany', name: 'Abdullah Awad Al-Juhany', short: 'Al-Juhany', ar: 'عبد الله عواد الجهني', country: 'Arabie saoudite', tone: '#2f5a5a', photo: 'portraits/juhany.webp', folder: 'Abdullaah_3awwaad_Al-Juhaynee_128kbps', full: 'abdullah-juhani/r1', read: 62 },
+  { id: 'jibreel', name: 'Muhammad Jibreel', short: 'Jibreel', ar: 'محمد جبريل', country: 'Égypte', tone: '#3a2f6b', photo: 'portraits/jibreel.webp', folder: 'Muhammad_Jibreel_128kbps', full: 'muhammad-jibreel/r1' },
+  { id: 'shatri', name: 'Abu Bakr Ash-Shatri', short: 'Ash-Shatri', ar: 'أبو بكر الشاطري', country: 'Arabie saoudite', tone: '#3b4a6b', photo: null, folder: 'Abu_Bakr_Ash-Shaatree_128kbps', full: 'abubakr-shatri/r1', read: 4 },
+  { id: 'rifai', name: 'Hani Ar-Rifai', short: 'Ar-Rifai', ar: 'هاني الرفاعي', country: 'Arabie saoudite', tone: '#6b3b5a', photo: null, folder: 'Hani_Rifai_192kbps', full: 'hani-rifai/r1', read: 89 },
+  { id: 'abbad', name: 'Fares Abbad', short: 'Fares Abbad', ar: 'فارس عباد', country: 'Arabie saoudite', tone: '#2d5a3d', photo: null, folder: 'Fares_Abbad_64kbps', full: 'fares-abbad/r1', read: 81 },
+  { id: 'ayyub', name: 'Muhammad Ayyub', short: 'Ayyub', ar: 'محمد أيوب', country: 'Arabie saoudite', tone: '#5a4a2d', photo: null, folder: 'Muhammad_Ayyoub_128kbps', full: 'muhammad-ayyub/r1', read: 109 },
+  { id: 'budair', name: 'Salah Al-Budair', short: 'Al-Budair', ar: 'صلاح البدير', country: 'Arabie saoudite', tone: '#2d3d5a', photo: 'portraits/budair.webp', folder: 'Salah_Al_Budair_128kbps', full: 'salah-budair/r1', read: 43 },
+  { id: 'jaber', name: 'Ali Jaber', short: 'Ali Jaber', ar: 'علي جابر', country: 'Arabie saoudite', tone: '#5a2d2d', photo: 'portraits/jaber.webp', folder: 'Ali_Jaber_64kbps', full: 'ali-jaber/r1', read: 76 },
+  { id: 'basfar', name: 'Abdullah Basfar', short: 'Basfar', ar: 'عبد الله بصفر', country: 'Arabie saoudite', tone: '#2d5a55', photo: null, folder: 'Abdullah_Basfar_192kbps', full: 'abdullah-basfar/r1', read: 60 },
+  { id: 'qahtani', name: 'Khalid Al-Qahtani', short: 'Al-Qahtani', ar: 'خالد القحطاني', country: 'Arabie saoudite', tone: '#6b552d', photo: null, folder: 'Khaalid_Abdullaah_al-Qahtaanee_192kbps', full: 'khalid-qahtani/r1', read: 21 },
+  { id: 'banna', name: 'Mahmoud Ali Al-Banna', short: 'Al-Banna', ar: 'محمود علي البنا', country: 'Égypte', tone: '#4a2d5a', photo: 'portraits/banna.webp', folder: 'Mahmoud_Ali_Al_Banna_32kbps', full: 'mahmoud-banna/r1' },
+  { id: 'tablawi', name: 'Mohamed Al-Tablawi', short: 'At-Tablawi', ar: 'محمد محمود الطبلاوي', country: 'Égypte', tone: '#3d2d4a', photo: null, folder: 'Mohammad_al_Tablaway_128kbps', full: 'muhammad-tablawi/r1', read: 106 },
+  { id: 'mustafaismail', name: 'Mustafa Ismail', short: 'Mustafa Ismail', ar: 'مصطفى إسماعيل', country: 'Égypte', tone: '#6b2f2f', photo: 'portraits/mustafaismail.webp', folder: 'Mustafa_Ismail_48kbps', full: 'mustafa-ismail/r1' }
 ];
 
 export const VERSES = [7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
