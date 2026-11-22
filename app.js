@@ -610,6 +610,9 @@ function renderSide(route) {
 
 function renderDock(route) {
   const cur = st.r ? st : last;
+  // Les commandes de lecture prennent la couleur du récitateur écouté.
+  if (cur) document.documentElement.style.setProperty('--rt', RBY[cur.r].tone);
+  document.documentElement.toggleAttribute('data-rt', !!cur);
   const playing = st.r && !A().paused;
   $('#dock').innerHTML = `
     <div class="mini" ${cur ? '' : 'hidden'}>
@@ -674,6 +677,7 @@ function renderPlayer() {
 function renderSheet() {
   const opt = (k, v, inner, label) => `<button class="opt" role="radio" aria-checked="${prefs[k] === v}" data-act="set" data-k="${k}" data-v="${v}" aria-label="${label}">${inner}</button>`;
   const sw = (k, label, hint, disabled) => `<div class="swrow"><span><b>${label}</b><small>${hint}</small></span><button class="switch" role="switch" aria-checked="${!disabled && !!prefs[k]}" aria-disabled="${!!disabled}" aria-label="${label}" ${disabled ? '' : `data-act="flip" data-k="${k}"`}></button></div>`;
+  pushOv('sheet');
   $('#layer').innerHTML = `<div class="scrim" data-act="close-sheet"></div>
     <section class="sheet hide-sb" role="dialog" aria-modal="true" aria-label="Réglages de lecture">
       <span class="grab" aria-hidden="true"></span>
@@ -695,6 +699,7 @@ function renderVerseSheet(s, i) {
   getSurah(s).then((v) => {
     const a = v[i];
     const marked = marks.has(s + ':' + i);
+    pushOv('sheet');
     $('#layer').innerHTML = `<div class="scrim" data-act="close-sheet"></div>
       <section class="sheet vsheet hide-sb" role="dialog" aria-modal="true" aria-label="Verset ${i + 1}" style="--tone:${surahTone(s)}">
         <span class="grab" aria-hidden="true"></span>
@@ -712,7 +717,30 @@ function renderVerseSheet(s, i) {
     $('.vsheet button')?.focus();
   }).catch(() => toast('Texte indisponible hors-ligne.'));
 }
-const closeSheet = () => { $('#layer').innerHTML = ''; };
+// ---------- Bouton retour de l'appareil ----------
+// Le lecteur plein écran et les feuilles ajoutent une entrée d'historique : « retour » les ferme au lieu de quitter la page.
+const pushOv = (ov) => { if (history.state?.ov !== ov) history.pushState({ ov }, ''); };
+function openPlayer() {
+  if (!st.r && !last) return;
+  st.open = true; renderPlayer(); pushOv('player');
+  $('#player [data-act="close"]')?.focus();
+}
+function closePlayer() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  if (history.state?.ov === 'player') return history.back(); // popstate ferme le lecteur
+  st.open = false; renderPlayer();
+}
+// silent : vider sans toucher à l'historique (navigation déjà en cours).
+function closeSheet(silent) {
+  if (!$('#layer .sheet')) return;
+  if (!silent && history.state?.ov === 'sheet') return history.back();
+  $('#layer').innerHTML = '';
+}
+window.addEventListener('popstate', (e) => {
+  const ov = e.state?.ov;
+  if (ov !== 'sheet') $('#layer').innerHTML = '';
+  if (!ov && st.open) { st.open = false; if (document.fullscreenElement) document.exitFullscreen(); renderPlayer(); }
+});
 
 // ---------- Mises à jour ----------
 let route = '';
@@ -722,6 +750,8 @@ function render() {
   route = ['recitateur', 'lire', 'recherche', 'profil'].includes(p) ? p : '';
   $('#view').innerHTML = route === 'recitateur' ? reciterView(a) : route === 'lire' ? readView(a, b) : route === 'recherche' ? searchView() : route === 'profil' ? profileView() : homeView();
   const navRoute = route === 'recitateur' ? '' : route;
+  $('#view').classList.toggle('tinted', route === 'recitateur');
+  $('#view').style.setProperty('--t', (RBY[a] || RECITERS[0]).tone);
   renderSide(navRoute);
   renderDock(navRoute);
   renderPlayer();
@@ -798,9 +828,18 @@ document.addEventListener('click', async (e) => {
     case 'next': goAyah(st.pre ? 0 : st.i + 1); break;
     case 'rep': setRep(); break;
     case 'timer': setTimer(); break;
-    case 'open': st.open = true; renderPlayer(); $('#player [data-act="close"]')?.focus(); break;
-    case 'close': st.open = false; if (document.fullscreenElement) document.exitFullscreen(); renderPlayer(); break;
-    case 'close-go': e.preventDefault(); st.open = false; if (document.fullscreenElement) document.exitFullscreen(); location.hash = d.href || el.getAttribute('href'); renderPlayer(); break;
+    case 'open': openPlayer(); break;
+    case 'close': closePlayer(); break;
+    case 'close-go': {
+      e.preventDefault();
+      const to = d.href || el.getAttribute('href');
+      st.open = false; closeSheet(true);
+      if (document.fullscreenElement) document.exitFullscreen();
+      // L'entrée « lecteur ouvert » est remplacée par la page visée : le bouton retour ramène à la page d'avant.
+      if (history.state?.ov) { history.replaceState(null, '', to); render(); window.scrollTo(0, 0); } else location.hash = to;
+      renderPlayer();
+      break;
+    }
     case 'back': if (history.length > 1) history.back(); else location.hash = '#/'; break;
     case 'fullscreen': document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.().catch(() => {}); break;
     case 'seek': {
@@ -903,12 +942,12 @@ document.addEventListener('input', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { if ($('#layer .sheet')) closeSheet(); else if (st.open) { st.open = false; renderPlayer(); } }
+  if (e.key === 'Escape') { if ($('#layer .sheet')) closeSheet(); else if (st.open) closePlayer(); }
   if (e.target.matches?.('.track') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); goAyah(st.i + (e.key === 'ArrowRight' ? 1 : -1)); }
   if (e.key === ' ' && !e.target.matches('input, button, a, [role="slider"]') && st.r) { e.preventDefault(); toggle(); }
 });
 
-window.addEventListener('hashchange', () => { closeSheet(); render(); if (!/^#\/lire\/\d+\/\d+/.test(location.hash)) window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => { closeSheet(true); render(); if (!/^#\/lire\/\d+\/\d+/.test(location.hash)) window.scrollTo(0, 0); });
 window.addEventListener('pagehide', () => ls.set('nun.stats', stats));
 setInterval(() => {
   if (prefs.theme === 'auto') applyTheme();
@@ -923,6 +962,35 @@ document.addEventListener('change', (e) => {
   toast('Recalcul des horaires…');
   refreshPrayer();
 });
+if (history.state?.ov) history.replaceState(null, ''); // état d'un ancien overlay conservé par un rechargement
+
+// ---------- Gestes tactiles ----------
+// Lecteur : glisser vers le bas pour fermer, gauche/droite pour changer de verset.
+// Mini-lecteur : gauche/droite pour changer de verset, vers le haut pour ouvrir. Feuilles : vers le bas pour fermer.
+let swipe = null;
+document.addEventListener('touchstart', (e) => {
+  const t = e.touches[0], zone = e.target.closest('#player, .mini, .sheet');
+  swipe = zone && e.touches.length === 1 && !e.target.closest('.track, input, select') ? { zone, x: t.clientX, y: t.clientY, at: Date.now(), top: e.target.closest('.p-art, .p-bar, .grab') ? 0 : zone.scrollTop } : null;
+}, { passive: true });
+document.addEventListener('touchend', (e) => {
+  if (!swipe) return;
+  const { zone, x, y, at, top } = swipe;
+  swipe = null;
+  const t = e.changedTouches[0], dx = t.clientX - x, dy = t.clientY - y;
+  if (Date.now() - at > 700) return;
+  const horiz = Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5;
+  const down = dy > 70 && dy > Math.abs(dx) * 1.5 && top <= 0, up = dy < -50 && -dy > Math.abs(dx) * 1.5;
+  if (zone.matches('.sheet')) { if (down) closeSheet(); return; }
+  if (zone.matches('#player') && down) return closePlayer();
+  if (horiz) {
+    if (!st.r) return;
+    goAyah(dx < 0 ? (st.pre ? 0 : st.i + 1) : (st.pre ? -1 : st.i - 1));
+    if (navigator.vibrate) navigator.vibrate(8);
+    return;
+  }
+  if (up && zone.matches('.mini')) openPlayer();
+}, { passive: true });
+
 render();
 
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {

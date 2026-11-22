@@ -365,3 +365,23 @@ h2.two { font-size: 28px; letter-spacing: -.9px; }
 .pmeth { display: block; margin-top: 12px; font-size: 12px; color: var(--muted); }
 .pmeth u { color: var(--accent); text-decoration: none; font-weight: 600; }
 .pselect { width: 100%; color: var(--ink); font: inherit; font-size: 15px; border: 0; appearance: auto; }
+
+/* Couleur du récitateur sur les commandes de lecture (lecteur, mini-lecteur, page du récitateur) */
+html[data-rt] #dock, html[data-rt] #player { --t: var(--rt); }
+#view.tinted, html[data-rt] #dock, html[data-rt] #player {
+  --accent: color-mix(in oklab, var(--t) 42%, #fff);
+  --amber: color-mix(in oklab, var(--t) 42%, #fff);
+  --grad: linear-gradient(180deg, color-mix(in oklab, var(--t) 28%, #fff) 0%, color-mix(in oklab, var(--t) 58%, #fff) 100%);
+  --on-grad: color-mix(in oklab, var(--t) 55%, #000);
+  --btn-glow: color-mix(in oklab, var(--t) 50%, transparent);
+  --soft: color-mix(in oklab, var(--t) 24%, transparent);
+}
+html[data-rt] #dock { --mini: color-mix(in oklab, var(--t) 45%, var(--bg)); }
+[data-theme="jour"] #view.tinted, [data-theme="jour"] #dock, [data-theme="jour"] #player {
+  --accent: color-mix(in oklab, var(--t) 88%, #000);
+  --amber: color-mix(in oklab, var(--t) 88%, #000);
+}
+html[data-theme="jour"][data-rt] #dock { --mini: color-mix(in oklab, var(--t) 22%, var(--bg)); }
+html[data-rt] #player .round.amber, #view.tinted .btn-grad { box-shadow: 0 6px 20px var(--btn-glow); }
+html[data-rt] #player .scrub .knob { box-shadow: 0 0 10px var(--btn-glow); }
+html[data-rt] .mini .t small { color: var(--ink); opacity: .7; }
