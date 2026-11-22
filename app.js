@@ -531,12 +531,6 @@ function homeView() {
       ${portrait(r)}<span class="fade"></span>
       <span class="meta"><span class="ar" lang="ar" dir="rtl">${r.ar}</span><b>${esc(r.name)}</b><small>${T(r.country)} · ${T`Coran complet`}</small></span>
     </a>`).join('');
-  const resume = last ? `
-    <button class="resume" data-act="resume">
-      ${surahArt(last.s)}
-      <span class="t"><small class="muted">${T`Reprendre`}</small><b>${T`${NAMES_LATIN[last.s - 1]} · verset ${last.i + 1}`}</b><small class="muted">${esc(RBY[last.r].name)}</small></span>
-      <span class="go" aria-hidden="true">${I.play}</span>
-    </button>` : '';
   const vd = verseOfDay();
   const np = nextPrayer();
   const prayerCard = prayer ? `
@@ -556,8 +550,7 @@ function homeView() {
       <span class="only-desk" style="gap:8px"><button class="icon-btn" data-act="share-app" aria-label="${T`Partager l'app`}">${I.share}</button><button class="icon-btn" data-act="theme-cycle" aria-label="${T`Changer de thème`}">${I.moon}</button></span></div>
     <section aria-label="${T`Récitateurs`}"><div class="carousel hide-sb" id="car">${cards}</div>
       <div class="dots" aria-hidden="true">${RECITERS.map((_, k) => `<i class="${k === 0 ? 'on' : ''}"></i>`).join('')}</div></section>
-    ${resume}
-    ${shelf(T`Écoutés récemment`, recent.slice(1))}
+    ${shelf(T`Écoutés récemment`, recent)}
     ${shelf(T`Tes favoris`, [...favs].reverse().map((k) => { const [r, s] = k.split(':'); return { r, s: +s }; }))}
     ${prayerCard}
     <section class="vday" style="--tone:${surahTone(vd.s)}" aria-label="${T`Verset du jour`}">
@@ -703,6 +696,20 @@ function profileView() {
       <div class="kgrid" role="list" aria-label="${T`Sourates terminées`}">${VERSES.map((_, k) => `<a role="listitem" href="#/lire/${k + 1}" class="${khatm.has(k + 1) ? 'on' : ''}" title="${NAMES_LATIN[k]}" aria-label="${NAMES_LATIN[k]}${khatm.has(k + 1) ? T`, terminée` : ''}"></a>`).join('')}</div>
       ${khatm.size ? `<button class="btn-line" data-act="khatm-reset" style="margin-top:12px">${T`Recommencer une khatma`}</button>` : ''}
     </div>
+    <h2 class="sec">${T`Marque-pages`}</h2>
+    ${mk.length ? `<ul class="list">${mk.map(([s, i]) => `<li><a class="srow" href="#/lire/${s}/${i + 1}"><span class="n">${s}:${i + 1}</span><span class="t"><b>${NAMES_LATIN[s - 1]}</b><small>${T`verset ${i + 1}`}</small></span><span class="ar" lang="ar" dir="rtl">${NAMES_AR[s - 1]}</span></a></li>`).join('')}</ul>` : `<p class="muted" style="font-size:14px">${T`Touche un verset dans Lire puis « Marquer » pour le retrouver ici.`}</p>`}
+    <h2 class="sec">${T`Écoute`}</h2>
+    <p class="lbl">${T`Voix par défaut`}</p>
+    <div class="voices hide-sb" role="radiogroup" aria-label="${T`Voix par défaut`}">${RECITERS.map((r) => `<button class="voice" role="radio" aria-checked="${prefs.reciter === r.id}" data-act="set" data-k="reciter" data-v="${r.id}"><span class="av" style="--tone:${r.tone}">${r.photo ? `<img src="${r.photo}" alt="">` : ''}</span>${esc(r.short)}</button>`).join('')}</div>
+    ${sw('whole', T`Audio en continu`, T`La sourate en un seul enregistrement, sans coupure entre les versets`)}
+    ${sw('chain', T`Enchaîner les sourates`, T`Dans l'ordre du Coran`)}
+    <h2 class="sec">${T`Lecture`}</h2>
+    ${sw('tajwid', T`Tajwid en couleur`, T`Les règles de récitation colorées, avec la légende`)}
+    ${sw('ph', T`Phonétique`, T`La prononciation en lettres latines sous l’arabe`)}
+    ${sw('tr', T`Traduction`, T`Le sens du verset sous le texte`)}
+    ${sw('follow', T`Suivre la récitation`, T`Le verset récité est mis en avant dans Lire`)}
+    <p class="lbl">${T`Langue de la traduction`}</p>
+    <select class="field pselect" id="tl" aria-label="${T`Langue de la traduction`}">${LANGS.map(([id, l]) => `<option value="${id}" ${lang()[0] === id ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <h2 class="sec">${T`Horaires de prière`}</h2>
     ${prayer ? `<div class="swrow"><span><b>${T`Activés`}</b><small>${T`Ta position arrondie reste sur l'appareil.`}</small></span><button class="btn-line" data-act="prayer-off">${T`Désactiver`}</button></div>
     <p class="lbl">${T`Méthode de calcul · choisis celle de ta mosquée`}</p>
@@ -711,28 +718,19 @@ function profileView() {
     <div class="seg" role="radiogroup" aria-label="${T`Heure du Asr`}">${[[0, 'Standard'], [1, 'Hanafite']].map(([v, l]) => `<button role="radio" aria-checked="${prefs.asr === v}" data-act="set" data-k="asr" data-v="${v}">${T(l)}</button>`).join('')}</div>
     <p class="lbl">${T`Ajuster sur ta mosquée · en minutes`}</p>
     <div class="tune">${PRAYERS.map(([k, l]) => { const o = prefs.tune[k] || 0; return `<div><small>${l}</small><b>${pt(k)}</b><span><button data-act="tune" data-k="${k}" data-v="-1" aria-label="${T`${l} une minute plus tôt`}">−</button><i>${o > 0 ? '+' : ''}${o}</i><button data-act="tune" data-k="${k}" data-v="1" aria-label="${T`${l} une minute plus tard`}">+</button></span></div>`; }).join('')}</div>` : `<div class="swrow"><span><b>${T`Désactivés`}</b><small>${T`Nūn demande ta position une seule fois, l'arrondit, puis calcule les horaires.`}</small></span><button class="btn-line" data-act="prayer-on">${T`Activer`}</button></div>`}
-    <h2 class="sec">${T`Marque-pages`}</h2>
-    ${mk.length ? `<ul class="list">${mk.map(([s, i]) => `<li><a class="srow" href="#/lire/${s}/${i + 1}"><span class="n">${s}:${i + 1}</span><span class="t"><b>${NAMES_LATIN[s - 1]}</b><small>${T`verset ${i + 1}`}</small></span><span class="ar" lang="ar" dir="rtl">${NAMES_AR[s - 1]}</span></a></li>`).join('')}</ul>` : `<p class="muted" style="font-size:14px">${T`Touche un verset dans Lire puis « Marquer » pour le retrouver ici.`}</p>`}
     <h2 class="sec">${T`Apparence`}</h2>
     <p class="lbl">Langue · Language</p>
     <div class="seg" role="radiogroup" aria-label="Langue · Language">${[['fr', 'Français'], ['en', 'English']].map(([v, l]) => `<button role="radio" lang="${v}" aria-checked="${prefs.ui === v}" data-act="set" data-k="ui" data-v="${v}">${l}</button>`).join('')}</div>
     <p class="lbl">${T`Thème`}</p>
     <div class="seg" role="radiogroup" aria-label="${T`Thème`}">${[['nuit', 'Nuit'], ['jour', 'Jour'], ['auto', 'Auto']].map(([v, l]) => `<button role="radio" aria-checked="${prefs.theme === v}" data-act="set" data-k="theme" data-v="${v}">${T(l)}</button>`).join('')}</div>
     <p class="muted" style="font-size:12px;margin:8px 2px 0">${prayer ? T`Auto : jour de Fajr (${pt('Fajr')}) à Maghrib (${pt('Maghrib')}), nuit le reste du temps.` : T`Auto : jour de 6 h à 18 h, nuit le reste du temps.`}</p>
-    <h2 class="sec">${T`Voix par défaut`}</h2>
-    <div class="voices hide-sb" role="radiogroup" aria-label="${T`Voix par défaut`}">${RECITERS.map((r) => `<button class="voice" role="radio" aria-checked="${prefs.reciter === r.id}" data-act="set" data-k="reciter" data-v="${r.id}"><span class="av" style="--tone:${r.tone}">${r.photo ? `<img src="${r.photo}" alt="">` : ''}</span>${esc(r.short)}</button>`).join('')}</div>
-    <h2 class="sec">${T`Écoute et lecture`}</h2>
-    ${sw('whole', T`Audio en continu`, T`La sourate en un seul enregistrement, sans coupure entre les versets`)}
-    ${sw('chain', T`Enchaîner les sourates`, T`Dans l'ordre du Coran`)}
-    ${sw('follow', T`Suivre la récitation`, T`Le verset récité est mis en avant dans Lire`)}
-    ${sw('tr', T`Traduction`, lang()[1])}
     <h2 class="sec">${T`Stockage`}</h2>
     <div class="swrow"><span><b>${T`Sourates hors-ligne`}</b><small id="storage">${T`${downloaded.size} sourate(s) téléchargée(s)`}</small></span><button class="btn-line" data-act="clear-dl">${T`Vider`}</button></div>
     <h2 class="sec">${T`Partager Nūn`}</h2>
     <button class="btn-grad" data-act="share-app">${I.share}${T`Envoyer l'app à un proche`}</button>
     <h2 class="sec">${T`À propos`}</h2>
-    <p class="credits">${T`Nūn est gratuit, sans publicité et sans compte.`}<br>${T`Texte : Tanzil (écriture uthmani et tajwid), traductions et phonétique via alquran.cloud. Audio : everyayah.com.`}</p>
-    <p class="credits"><b>${T`Photos`}</b> ${T`(Wikimedia Commons, fond retiré) :`}<br>${CREDITS.filter(([who]) => RECITERS.some((r) => r.photo && r.short === who)).map(([who, src]) => `${esc(who)} : ${esc(credit(src))}`).join('<br>')}</p>`;
+    <p class="credits">${T`Nūn est gratuit, sans publicité et sans compte.`}<br>${T`Texte : Tanzil (écriture uthmani et tajwid), traductions et phonétique via alquran.cloud. Audio : everyayah.com et mp3quran.net.`}</p>
+    <details class="credits"><summary>${T`Crédits des photos`}</summary>${T`(Wikimedia Commons, fond retiré) :`}<br>${CREDITS.filter(([who]) => RECITERS.some((r) => r.photo && r.short === who)).map(([who, src]) => `${esc(who)} : ${esc(credit(src))}`).join('<br>')}</details>`;
 }
 
 // ---------- Cadres communs ----------
@@ -786,7 +784,7 @@ function renderPlayer() {
       <span style="display:flex;gap:8px"><button class="glass-btn" data-act="share-surah" aria-label="${T`Partager la sourate`}">${I.share}</button><button class="glass-btn only-desk" data-act="fullscreen" aria-label="${T`Plein écran`}">${I.full}</button><button class="glass-btn" data-act="theme-cycle" aria-label="${T`Changer de thème`}">${I.moon}</button></span></div>
     <div class="p-side">
       <button class="round" data-act="fav" aria-pressed="${favs.has(cur.r + ':' + cur.s)}" aria-label="${favs.has(cur.r + ':' + cur.s) ? T`Retirer des favoris` : T`Ajouter aux favoris`}">${favs.has(cur.r + ':' + cur.s) ? I.heartOn : I.heart}</button>
-      <button class="round" data-act="rep" aria-label="${T`Répéter chaque verset (${st.rep} fois)`}">${I.repeat}${st.rep > 1 ? `<span class="badge">${st.rep}</span>` : ''}</button>
+      ${noSync ? '' : `<button class="round" data-act="rep" aria-label="${T`Répéter chaque verset (${st.rep} fois)`}">${I.repeat}${st.rep > 1 ? `<span class="badge">${st.rep}</span>` : ''}</button>`}
       <button class="round" data-act="flip" data-k="tr" aria-pressed="${prefs.tr}" aria-label="${T`Traduction`}">${I.bubble}</button>
       <a class="round amber" href="#/lire/${cur.s}/${cur.i + 1}" data-act="close-go" aria-label="${T`Lire le texte`}">${I.book}</a>
     </div>
@@ -804,7 +802,7 @@ function renderPlayer() {
         <button data-act="next" aria-label="${T`Verset suivant`}">${I.next}</button>
       </div>
       <div class="p-extra">
-        <button class="chip only-desk" data-act="rep" aria-pressed="${st.rep > 1}">${I.repeat}${T`Répéter ×${st.rep}`}</button>
+        ${noSync ? '' : `<button class="chip only-desk" data-act="rep" aria-pressed="${st.rep > 1}">${I.repeat}${T`Répéter ×${st.rep}`}</button>`}
         <button class="chip only-desk" data-act="flip" data-k="tr" aria-pressed="${prefs.tr}">${I.bubble}${T`Traduction`}</button>
         <button class="chip" data-act="rate" aria-label="${T`Vitesse de lecture ${prefs.rate} fois`}">${T`Vitesse ${prefs.ui === 'en' ? prefs.rate : String(prefs.rate).replace('.', ',')}×`}</button>
         <button class="chip" data-act="timer" aria-pressed="${!!st.timer}">${I.timer}${st.timer ? T`Arrêt dans ${st.timer} min` : T`Minuteur`}</button>
@@ -974,7 +972,6 @@ document.addEventListener('click', async (e) => {
   switch (d.act) {
     case 'play': play(d.r || (st.r && route !== 'recherche' ? st.r : prefs.reciter), s); break;
     case 'playv': closeSheet(); play(st.r || prefs.reciter, s, i); break;
-    case 'resume': if (last) play(last.r, last.s, last.i); break;
     case 'toggle': toggle(); break;
     case 'prev': goAyah(st.pre ? -1 : st.i - 1); break;
     case 'next': goAyah(st.pre ? 0 : st.i + 1); break;
@@ -1132,7 +1129,7 @@ document.addEventListener('change', (e) => {
     prefs.tl = e.target.value;
     savePrefs();
     st.verses = null; st.vs = 0; // le lecteur recharge le texte dans la nouvelle langue
-    fillRead();
+    if (route === 'profil') render(); else fillRead();
     if (st.r) getSurah(st.s).then((v) => { st.verses = v; st.vs = st.s; renderPlayer(); }).catch(() => {});
     return;
   }

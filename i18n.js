@@ -9,7 +9,6 @@ export const EN = {
   'Récitateurs': 'Reciters',
   'Voir les sourates de {}': 'See the surahs of {}',
   'Coran complet': 'Complete Quran',
-  'Reprendre': 'Resume',
   '{} · verset {}': '{} · verse {}',
   'Écoutés récemment': 'Recently played',
   'Tes favoris': 'Your favorites',
@@ -197,7 +196,6 @@ export const EN = {
   'Auto : jour de Fajr ({}) à Maghrib ({}), nuit le reste du temps.': 'Auto: day from Fajr ({}) to Maghrib ({}), night the rest of the time.',
   'Auto : jour de 6 h à 18 h, nuit le reste du temps.': 'Auto: day from 6 am to 6 pm, night the rest of the time.',
   'Voix par défaut': 'Default voice',
-  'Écoute et lecture': 'Listening and reading',
   'Enchaîner les sourates': 'Autoplay next surah',
   'Audio en continu': 'Continuous audio',
   'La sourate en un seul enregistrement, sans coupure entre les versets': 'The whole surah as one recording, with no break between verses',
@@ -213,8 +211,9 @@ export const EN = {
   "Envoyer l'app à un proche": 'Send the app to someone',
   'À propos': 'About',
   'Nūn est gratuit, sans publicité et sans compte.': 'Nūn is free, with no ads and no account.',
-  'Texte : Tanzil (écriture uthmani et tajwid), traductions et phonétique via alquran.cloud. Audio : everyayah.com.': 'Text: Tanzil (Uthmani script and tajweed), translations and transliteration via alquran.cloud. Audio: everyayah.com.',
-  'Photos': 'Photos',
+  'Texte : Tanzil (écriture uthmani et tajwid), traductions et phonétique via alquran.cloud. Audio : everyayah.com et mp3quran.net.': 'Text: Tanzil (Uthmani script and tajweed), translations and transliteration via alquran.cloud. Audio: everyayah.com and mp3quran.net.',
+  'Crédits des photos': 'Photo credits',
+  'Écoute': 'Listening',
   '(Wikimedia Commons, fond retiré) :': '(Wikimedia Commons, background removed):',
 
   // Messages

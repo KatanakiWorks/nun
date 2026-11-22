@@ -69,11 +69,6 @@ h2.two { font-size: 28px; letter-spacing: -.9px; }
 .tile .art { height: 132px; font-size: 30px; }
 .tile b { display: block; margin-top: 8px; font-size: 14px; }
 .tile small { display: block; font-size: 12px; color: var(--muted); }
-.resume { display: flex; align-items: center; gap: 12px; margin-top: 24px; padding: 12px 14px 12px 12px; border-radius: 24px; background: var(--surface); width: 100%; text-align: left; }
-.resume .art { flex: 0 0 56px; height: 56px; border-radius: 15px; font-size: 13px; }
-.resume span.t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.resume .go { flex: 0 0 44px; height: 44px; border-radius: 50%; background: var(--grad); color: var(--on-grad); display: flex; align-items: center; justify-content: center; }
-.resume .go svg { width: 15px; height: 15px; }
 
 /* ---------- Page récitateur ---------- */
 .rhero { position: relative; height: 460px; margin: calc(-1 * max(54px, env(safe-area-inset-top)) + 8px) -10px 0; border-radius: 0 0 34px 34px; overflow: hidden; background: linear-gradient(165deg, var(--tone) 0%, #110d0b 120%); color: #fff; }
@@ -425,3 +420,6 @@ html[data-rt] .mini .t small { color: var(--ink); opacity: .7; }
 /* Favoris */
 .round[data-act="fav"][aria-pressed="true"] { color: var(--accent); }
 .tile .art { border-radius: 20px; }
+
+/* Crédits des photos repliables */
+details.credits summary { cursor: pointer; color: var(--ink); font-weight: 600; margin-bottom: 6px; }
