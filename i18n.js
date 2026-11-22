@@ -166,11 +166,7 @@ export const EN = {
   'Lire le texte': 'Read the text',
   'Actions pour ce verset': 'Actions for this verse',
   'Position dans la sourate': 'Position in the surah',
-  'Répéter ×{}': 'Repeat ×{}',
-  'Répéter': 'Repeat',
   'Vitesse de lecture {} fois': 'Playback speed {} times',
-  'Arrêt dans {} min': 'Stops in {} min',
-  'Minuteur': 'Sleep timer',
 
   // Profil
   'et préférences': 'and settings',
@@ -220,9 +216,6 @@ export const EN = {
   '{} terminée · khatma à {} %': '{} finished · khatma {}% done',
   'Sourate décochée.': 'Surah unchecked.',
   'Recommencer ta khatma ? Les sourates cochées seront décochées.': 'Start your khatma again? Checked surahs will be unchecked.',
-  'Arrêt dans {} minutes.': 'Stopping in {} minutes.',
-  'Minuteur : la récitation est en pause.': 'Sleep timer: the recitation is paused.',
-  'Minuteur désactivé.': 'Sleep timer off.',
   'Chaque verset sera répété {} fois.': 'Each verse will be repeated {} times.',
   'Répétition désactivée.': 'Repeat off.',
   '{} est disponible hors-ligne.': '{} is available offline.',

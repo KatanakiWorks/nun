@@ -250,14 +250,9 @@ h2.two { font-size: 28px; letter-spacing: -.9px; }
 .transport .tside[aria-pressed="true"] { background: var(--soft); color: var(--accent); border-color: transparent; }
 .transport button svg { width: 24px; height: 24px; }
 .transport .main { background: var(--grad); color: var(--on-grad); box-shadow: 0 10px 30px var(--btn-glow); }
-.p-extra { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
-.p-extra .chip { justify-content: center; padding: 0 10px; }
 /* Titre du lecteur avec le cœur à droite, comme une ligne de titre */
 .p-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .p-title h1 { min-width: 0; }
-.pfav { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); color: var(--ink); display: flex; align-items: center; justify-content: center; }
-.pfav svg { width: 22px; height: 22px; }
-.pfav[aria-pressed="true"] { color: var(--accent); background: var(--soft); border-color: transparent; }
 .chip { height: 44px; padding: 0 16px; border-radius: 22px; border: 1px solid var(--line); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
 .chip svg { width: 15px; height: 15px; }
 .chip[aria-pressed="true"] { background: var(--soft); }
@@ -434,3 +429,7 @@ html[data-rt] .mini .t small { color: var(--ink); opacity: .7; }
 
 /* Crédits des photos repliables */
 details.credits summary { cursor: pointer; color: var(--ink); font-weight: 600; margin-bottom: 6px; }
+
+/* Lecteur : favori, traduction et lecture du texte dans la barre du haut */
+#player .p-bar .glass-btn[aria-pressed="true"] { background: rgba(255,255,255,.9); color: #1a1410; }
+#player .p-bar .glass-btn[data-act="fav"][aria-pressed="true"] { background: rgba(0,0,0,.28); color: #ff8a8a; }

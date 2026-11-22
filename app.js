@@ -138,7 +138,6 @@ const I = {
   dl: svg('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
   check: svg('<path d="M5 12.5l4.5 4.5L19 7"/>'),
   sliders: svg('<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>'),
-  timer: svg('<path d="M19 14.5A7 7 0 0 1 9.5 5a7 7 0 1 0 9.5 9.5z"/><path d="M15 3h4l-4 4h4"/>'),
   full: svg('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
   share: svg('<path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'),
   copy: svg('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
@@ -194,7 +193,7 @@ let curP = 0;
 const A = () => players[curP];
 const blobUrls = [null, null];
 let preKey = null;
-const st = { r: null, s: 1, i: 0, pre: false, rep: 1, repLeft: 1, timer: 0, timerId: 0, verses: null, vs: 0, open: false, cont: false, tm: null };
+const st = { r: null, s: 1, i: 0, pre: false, rep: 1, repLeft: 1, verses: null, vs: 0, open: false, cont: false, tm: null };
 const audioUrl = (r, s, a) => `https://everyayah.com/data/${RBY[r].folder}/${pad3(s)}${pad3(a)}.mp3`;
 const keyOf = (pre, s, i) => `${st.r}:${pre ? 'b' : s + ':' + i}`;
 
@@ -379,14 +378,6 @@ let statsTimer = 0;
 function saveStats() { clearTimeout(statsTimer); statsTimer = setTimeout(() => ls.set('nun.stats', stats), 1500); }
 setInterval(saveStats, 15000);
 
-function setTimer() {
-  const steps = [0, 15, 30, 60];
-  st.timer = steps[(steps.indexOf(st.timer) + 1) % steps.length];
-  clearTimeout(st.timerId);
-  if (st.timer) st.timerId = setTimeout(() => { A().pause(); st.timer = 0; sync(); toast(T('Minuteur : la récitation est en pause.')); }, st.timer * 60000);
-  toast(st.timer ? T`Arrêt dans ${st.timer} minutes.` : T('Minuteur désactivé.'));
-  sync();
-}
 function setRep() {
   const steps = [1, 3, 5, 10];
   st.rep = steps[(steps.indexOf(st.rep) + 1) % steps.length];
@@ -790,10 +781,9 @@ function renderPlayer() {
     <div class="p-art ${rev(cur.s)}" style="--tone:${surahTone(cur.s)}"><span class="glow"></span>
       <div class="names"><small lang="ar" dir="rtl">${isMedinan(cur.s) ? 'سورة مدنية' : 'سورة مكية'}</small><span lang="ar" dir="rtl">${NAMES_AR[cur.s - 1]}</span><em>${isMedinan(cur.s) ? T`Médinoise` : T`Mecquoise`}</em></div><span class="fade"></span></div>
     <div class="p-bar"><button class="glass-btn" data-act="close" aria-label="${T`Fermer le lecteur`}">${I.down}</button>
-      <span style="display:flex;gap:8px"><button class="glass-btn" data-act="share-surah" aria-label="${T`Partager la sourate`}">${I.share}</button><button class="glass-btn only-desk" data-act="fullscreen" aria-label="${T`Plein écran`}">${I.full}</button><button class="glass-btn" data-act="theme-cycle" aria-label="${T`Changer de thème`}">${I.moon}</button></span></div>
+      <span style="display:flex;gap:8px"><button class="glass-btn" data-act="fav" aria-pressed="${favs.has(cur.r + ':' + cur.s)}" aria-label="${favs.has(cur.r + ':' + cur.s) ? T`Retirer des favoris` : T`Ajouter aux favoris`}">${favs.has(cur.r + ':' + cur.s) ? I.heartOn : I.heart}</button><button class="glass-btn" data-act="flip" data-k="tr" aria-pressed="${prefs.tr}" aria-label="${T`Traduction`}">${I.bubble}</button><a class="glass-btn" href="#/lire/${cur.s}/${cur.i + 1}" data-act="close-go" aria-label="${T`Lire le texte`}">${I.book}</a><button class="glass-btn" data-act="share-surah" aria-label="${T`Partager la sourate`}">${I.share}</button><button class="glass-btn only-desk" data-act="fullscreen" aria-label="${T`Plein écran`}">${I.full}</button><button class="glass-btn" data-act="theme-cycle" aria-label="${T`Changer de thème`}">${I.moon}</button></span></div>
     <div class="p-body">
-      <div class="p-title"><h1>${NAMES_LATIN[cur.s - 1]}<br><a href="#/recitateur/${r.id}" data-act="close-go" class="p-reciter">${esc(r.name)}</a></h1>
-        <button class="pfav" data-act="fav" aria-pressed="${favs.has(cur.r + ':' + cur.s)}" aria-label="${favs.has(cur.r + ':' + cur.s) ? T`Retirer des favoris` : T`Ajouter aux favoris`}">${favs.has(cur.r + ':' + cur.s) ? I.heartOn : I.heart}</button></div>
+      <div class="p-title"><h1>${NAMES_LATIN[cur.s - 1]}<br><a href="#/recitateur/${r.id}" data-act="close-go" class="p-reciter">${esc(r.name)}</a></h1></div>
       <button class="p-verse" data-act="verse" data-s="${cur.s}" data-i="${cur.i}" aria-label="${T`Actions pour ce verset`}" ${pre ? 'disabled' : ''}>${noSync ? `<span class="fr">${T`Lecture en continu · le verset en cours n’est pas suivi pour ce récitateur.`}</span>` : `<span class="arv" lang="ar" dir="rtl">${ar}</span>${prefs.ph && ph ? `<span class="ph">${esc(ph)}</span>` : ''}${prefs.tr && fr ? `<span class="fr">${esc(fr)}</span>` : ''}`}</button>
       <div>
         <div class="scrub"><span class="js-time">${noSync ? '0:00' : pre ? 'Basmala' : T`Verset ${cur.i + 1}`}</span>
@@ -805,12 +795,7 @@ function renderPlayer() {
         <button data-act="prev" aria-label="${T`Sourate précédente`}">${I.prev}</button>
         <button class="main" data-act="toggle" aria-label="${paused ? T`Lancer la lecture` : T`Pause`}">${paused ? I.play : I.pause}</button>
         <button data-act="next" aria-label="${T`Sourate suivante`}">${I.next}</button>
-        <button class="tside" data-act="timer" aria-pressed="${!!st.timer}" aria-label="${st.timer ? T`Arrêt dans ${st.timer} min` : T`Minuteur`}">${I.timer}${st.timer ? `<span class="badge">${st.timer}</span>` : ''}</button>
-      </div>
-      <div class="p-extra">
-        ${noSync ? '' : `<button class="chip" data-act="rep" aria-pressed="${st.rep > 1}" aria-label="${T`Répéter chaque verset (${st.rep} fois)`}">${I.repeat}${st.rep > 1 ? T`Répéter ×${st.rep}` : T`Répéter`}</button>`}
-        <button class="chip" data-act="flip" data-k="tr" aria-pressed="${prefs.tr}">${I.bubble}${T`Traduction`}</button>
-        <button class="chip" data-act="close-go" data-href="#/lire/${cur.s}/${cur.i + 1}">${I.book}${T`Lire`}</button>
+        ${noSync ? '<span></span>' : `<button class="tside" data-act="rep" aria-pressed="${st.rep > 1}" aria-label="${T`Répéter chaque verset (${st.rep} fois)`}">${I.repeat}${st.rep > 1 ? `<span class="badge">${st.rep}</span>` : ''}</button>`}
       </div>
     </div>`;
   progress();
@@ -995,7 +980,6 @@ document.addEventListener('click', async (e) => {
       renderPlayer();
       break;
     }
-    case 'timer': setTimer(); break;
     case 'open': openPlayer(); break;
     case 'close': closePlayer(); break;
     case 'close-go': {
