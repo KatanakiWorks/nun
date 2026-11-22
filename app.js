@@ -33,7 +33,7 @@ const ls = {
 
 // ---------- Préférences et données locales (rien n'est envoyé) ----------
 const UI0 = (navigator.language || 'fr').toLowerCase().startsWith('fr') ? 'fr' : 'en';
-const DEFAULTS = { ui: UI0, theme: 'auto', reciter: 'alafasy', size: 28, font: 0, spacing: 1, tr: true, follow: true, chain: true, flow: false, method: 'auto', asr: 0, tune: {}, tl: UI0 === 'en' ? 'en.sahih' : 'fr.hamidullah', ph: false, tajwid: false, rate: 1, cont: false, followed: ['alafasy', 'husary', 'muaiqly', 'minshawi'] };
+const DEFAULTS = { ui: UI0, theme: 'auto', reciter: 'alafasy', size: 28, font: 0, spacing: 1, tr: true, follow: true, chain: true, flow: false, method: 'auto', asr: 0, tune: {}, tl: UI0 === 'en' ? 'en.sahih' : 'fr.hamidullah', ph: false, tajwid: false, rate: 1, whole: true, followed: ['alafasy', 'husary', 'muaiqly', 'minshawi'] };
 const prefs = { ...DEFAULTS, ...ls.get('nun.prefs', {}) };
 const lang = () => LANGS.find(([id]) => id === prefs.tl) || LANGS[0];
 // Langue de l'interface (français ou anglais). T traduit un gabarit étiqueté ou un texte : la clé est le texte français, {} pour chaque valeur.
@@ -223,7 +223,8 @@ function getTimings(r, s) {
   }
   return timingCache.get(k).catch(() => null);
 }
-const contOn = (r) => prefs.cont && !!RBY[r].full;
+// whole : audio en continu, activé par défaut (nouveau nom, pour ne pas reprendre l'ancien « cont: false » enregistré).
+const contOn = (r) => prefs.whole && !!RBY[r].full;
 const dlKey = (r, s) => (contOn(r) ? `${r}:${s}:c` : `${r}:${s}`); // les deux formats audio se téléchargent séparément
 // La vitesse est remise à zéro à chaque changement de source : on la réapplique.
 const applyRate = () => players.forEach((p) => { p.defaultPlaybackRate = prefs.rate; p.playbackRate = prefs.rate; });
@@ -721,7 +722,7 @@ function profileView() {
     <h2 class="sec">${T`Voix par défaut`}</h2>
     <div class="voices hide-sb" role="radiogroup" aria-label="${T`Voix par défaut`}">${RECITERS.map((r) => `<button class="voice" role="radio" aria-checked="${prefs.reciter === r.id}" data-act="set" data-k="reciter" data-v="${r.id}"><span class="av" style="--tone:${r.tone}">${r.photo ? `<img src="${r.photo}" alt="">` : ''}</span>${esc(r.short)}</button>`).join('')}</div>
     <h2 class="sec">${T`Écoute et lecture`}</h2>
-    ${sw('cont', T`Audio en continu`, T`La sourate en un seul enregistrement, sans coupure entre les versets`)}
+    ${sw('whole', T`Audio en continu`, T`La sourate en un seul enregistrement, sans coupure entre les versets`)}
     ${sw('chain', T`Enchaîner les sourates`, T`Dans l'ordre du Coran`)}
     ${sw('follow', T`Suivre la récitation`, T`Le verset récité est mis en avant dans Lire`)}
     ${sw('tr', T`Traduction`, lang()[1])}
@@ -1058,7 +1059,7 @@ document.addEventListener('click', async (e) => {
     case 'flip':
       prefs[d.k] = !prefs[d.k];
       savePrefs();
-      if (d.k === 'cont' && st.r) play(st.r, st.s, st.i); // on reprend au même verset dans le nouveau format
+      if (d.k === 'whole' && st.r) play(st.r, st.s, st.i); // on reprend au même verset dans le nouveau format
       if ($('#layer .sheet')) { renderSheet(); fillRead(); $(`#layer [data-k="${d.k}"]`)?.focus(); }
       else if (st.open) renderPlayer();
       else render();
