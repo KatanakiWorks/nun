@@ -385,3 +385,19 @@ html[data-theme="jour"][data-rt] #dock { --mini: color-mix(in oklab, var(--t) 22
 html[data-rt] #player .round.amber, #view.tinted .btn-grad { box-shadow: 0 6px 20px var(--btn-glow); }
 html[data-rt] #player .scrub .knob { box-shadow: 0 0 10px var(--btn-glow); }
 html[data-rt] .mini .t small { color: var(--ink); opacity: .7; }
+
+/* Deux pochettes : mecquoise (sable) et médinoise (vert) */
+.art.mk, .p-art.mk { --glowc: 255, 210, 160; --deep: #22130a; }
+.art.md, .p-art.md { --glowc: 170, 235, 200; --deep: #08201a; }
+.art.mk, .art.md { background: linear-gradient(165deg, var(--tone) 0%, var(--deep) 115%); }
+.p-art.mk, .p-art.md { background: linear-gradient(170deg, var(--tone) 0%, var(--deep) 100%); }
+.p-art.mk::before, .p-art.md::before { background: radial-gradient(80% 50% at 70% 15%, rgba(var(--glowc), .3), rgba(var(--glowc), 0) 70%); }
+.p-art.mk .glow, .p-art.md .glow { background: radial-gradient(circle, rgba(var(--glowc), .32), rgba(var(--glowc), 0) 65%); }
+.p-art .names em { margin-top: 4px; font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,240,226,.7); }
+.tune { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.tune > div { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 0 6px; border-radius: 16px; background: var(--surface); }
+.tune small { font-size: 11px; color: var(--muted); }
+.tune b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.tune span { display: flex; align-items: center; }
+.tune button { width: 26px; height: 32px; font-size: 18px; color: var(--accent); }
+.tune i { min-width: 22px; text-align: center; font-style: normal; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }

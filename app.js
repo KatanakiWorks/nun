@@ -1,4 +1,4 @@
-import { RECITERS, VERSES, NAMES_AR, NAMES_LATIN, surahTone, CREDITS } from './data.js';
+import { RECITERS, VERSES, NAMES_AR, NAMES_LATIN, surahTone, isMedinan, CREDITS } from './data.js';
 
 // ---------- Outils ----------
 const $ = (s, r = document) => r.querySelector(s);
@@ -18,7 +18,7 @@ const ls = {
 };
 
 // ---------- Préférences et données locales (rien n'est envoyé) ----------
-const DEFAULTS = { theme: 'auto', reciter: 'alafasy', size: 28, font: 0, spacing: 1, tr: true, follow: true, chain: true, flow: false, pm: 3, asr: 0, followed: ['alafasy', 'husary', 'muaiqly', 'minshawi'] };
+const DEFAULTS = { theme: 'auto', reciter: 'alafasy', size: 28, font: 0, spacing: 1, tr: true, follow: true, chain: true, flow: false, method: 'auto', asr: 0, tune: {}, followed: ['alafasy', 'husary', 'muaiqly', 'minshawi'] };
 const prefs = { ...DEFAULTS, ...ls.get('nun.prefs', {}) };
 if (!RBY[prefs.reciter]) prefs.reciter = 'alafasy';
 const savePrefs = () => ls.set('nun.prefs', prefs);
@@ -43,20 +43,20 @@ const khatmPct = () => Math.round(([...khatm].reduce((a, s) => a + VERSES[s - 1]
 const PRAYERS = [['Fajr', 'Fajr'], ['Dhuhr', 'Dhuhr'], ['Asr', 'Asr'], ['Maghrib', 'Maghrib'], ['Isha', 'Isha']];
 const dmy = (d) => `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
 const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
-// Méthodes de calcul (ids aladhan). La Ligue islamique mondiale (18°/17°) est la plus suivie, y compris par la plupart des mosquées en France.
-const METHODS = [[3, 'Ligue islamique mondiale · 18°/17°'], ['auto', 'Autorité officielle du pays'], [12, 'UOIF · 12°'], [4, 'Umm al-Qura · La Mecque'], [5, 'Égypte'], [21, 'Maroc'], [19, 'Algérie'], [18, 'Tunisie'], [13, 'Turquie · Diyanet'], [2, 'ISNA · Amérique du Nord']];
+// Méthodes de calcul (ids aladhan). Par défaut : l'autorité officielle du pays où l'on se trouve (Diyanet en Turquie, Maroc, Égypte…).
+const METHODS = [['auto', 'Officielle du pays (recommandé)'], [13, 'Turquie · Diyanet'], [3, 'Ligue islamique mondiale · 18°/17°'], [12, 'France · UOIF 12°'], [4, 'Umm al-Qura · La Mecque'], [5, 'Égypte'], [21, 'Maroc'], [19, 'Algérie'], [18, 'Tunisie'], [2, 'ISNA · Amérique du Nord']];
 async function loadPrayer(lat, lon) {
-  const d = new Date(), { pm, asr } = prefs;
+  const d = new Date(), { method: pm, asr } = prefs;
   const method = pm === 'auto' ? '' : `&method=${pm}`;
   const res = await fetch(`https://api.aladhan.com/v1/timings/${dmy(d)}?latitude=${lat}&longitude=${lon}${method}&school=${asr}`);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const j = (await res.json()).data, t = j.timings;
-  if (pm !== prefs.pm || asr !== prefs.asr) return; // réglage changé pendant la requête : la plus récente l'emporte
-  prayer = { lat, lon, date: today(), pm, asr, m: j.meta.method.name, t: Object.fromEntries(PRAYERS.map(([k]) => [k, t[k].slice(0, 5)])) };
+  if (pm !== prefs.method || asr !== prefs.asr) return; // réglage changé pendant la requête : la plus récente l'emporte
+  prayer = { lat, lon, date: today(), pm, asr, tz: j.meta.timezone, m: j.meta.method.name, t: Object.fromEntries(PRAYERS.map(([k]) => [k, t[k].slice(0, 5)])) };
   ls.set('nun.prayer', prayer);
 }
-// Recalcule si le jour ou les réglages ont changé (corrige aussi les anciens horaires UOIF enregistrés).
-const prayerStale = () => prayer && (prayer.date !== today() || prayer.pm !== prefs.pm || prayer.asr !== prefs.asr);
+// Recalcule si le jour ou les réglages ont changé (corrige aussi les horaires enregistrés avec l'ancienne méthode).
+const prayerStale = () => prayer && (prayer.date !== today() || prayer.pm !== prefs.method || prayer.asr !== prefs.asr || !prayer.tz);
 const refreshPrayer = () => loadPrayer(prayer.lat, prayer.lon).then(() => render()).catch(() => {});
 function enablePrayer() {
   if (!navigator.geolocation) return toast('La localisation n’est pas disponible sur cet appareil.');
@@ -66,13 +66,23 @@ function enablePrayer() {
       await loadPrayer(pos.coords.latitude.toFixed(2), pos.coords.longitude.toFixed(2));
       render();
     } catch { toast('Horaires indisponibles pour le moment. Réessaie avec une connexion.'); }
-  }, () => toast('Sans ta position, Nūn ne peut pas calculer les horaires.'), { timeout: 15000, maximumAge: 3600000 });
+  }, () => toast('Sans ta position, Nūn ne peut pas calculer les horaires.'), { enableHighAccuracy: true, timeout: 15000, maximumAge: 600000 });
 }
+// Heure actuelle là où les horaires sont calculés (l'appareil peut être réglé sur un autre fuseau).
+function nowMin() {
+  const n = new Date();
+  try {
+    const [h, m] = new Intl.DateTimeFormat('en-GB', { timeZone: prayer?.tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(n).split(':').map(Number);
+    return h * 60 + m;
+  } catch { return n.getHours() * 60 + n.getMinutes(); }
+}
+// Heure d'une prière avec l'ajustement manuel (± minutes) pour coller aux horaires de sa mosquée.
+const pt = (k) => { const v = (toMin(prayer.t[k]) + (prefs.tune[k] || 0) + 1440) % 1440; return `${String(Math.floor(v / 60)).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}`; };
 function nextPrayer() {
   if (!prayer) return null;
-  const now = new Date(), m = now.getHours() * 60 + now.getMinutes();
-  for (const [k, l] of PRAYERS) { const t = toMin(prayer.t[k]); if (t > m) return { k, l, at: prayer.t[k], left: t - m }; }
-  return { k: 'Fajr', l: 'Fajr', at: prayer.t.Fajr, left: 1440 - m + toMin(prayer.t.Fajr), tomorrow: true };
+  const m = nowMin();
+  for (const [k, l] of PRAYERS) { const t = toMin(pt(k)); if (t > m) return { k, l, at: pt(k), left: t - m }; }
+  return { k: 'Fajr', l: 'Fajr', at: pt('Fajr'), left: 1440 - m + toMin(pt('Fajr')), tomorrow: true };
 }
 const leftLabel = (min) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`);
 if (prayerStale()) refreshPrayer();
@@ -82,9 +92,9 @@ const SIZES = [24, 28, 32, 36];
 const SPACING = [['Serré', 1.9], ['Normal', 2.25], ['Aéré', 2.6]];
 
 function applyTheme() {
-  const now = new Date(), m = now.getHours() * 60 + now.getMinutes();
+  const m = nowMin();
   // Auto : jour entre Fajr et Maghrib si les horaires sont connus, sinon de 6 h à 18 h.
-  const day = prayer && prayer.date === today() ? m >= toMin(prayer.t.Fajr) && m < toMin(prayer.t.Maghrib) : m >= 360 && m < 1080;
+  const day = prayer && prayer.date === today() ? m >= toMin(pt('Fajr')) && m < toMin(pt('Maghrib')) : m >= 360 && m < 1080;
   const t = prefs.theme === 'auto' ? (day ? 'jour' : 'nuit') : prefs.theme;
   document.documentElement.dataset.theme = t;
   $('meta[name="theme-color"]').content = t === 'nuit' ? '#0b0b0d' : '#f3eee7';
@@ -398,7 +408,8 @@ async function clearDownloads() {
 }
 
 // ---------- Vues ----------
-const surahArt = (s) => `<span class="art" style="--tone:${surahTone(s)}" lang="ar" dir="rtl" aria-hidden="true">${NAMES_AR[s - 1]}</span>`;
+const rev = (s) => (isMedinan(s) ? 'md' : 'mk');
+const surahArt = (s) => `<span class="art ${rev(s)}" style="--tone:${surahTone(s)}" lang="ar" dir="rtl" aria-hidden="true">${NAMES_AR[s - 1]}</span>`;
 const backBtn = (cls = 'icon-btn') => `<button class="${cls}" data-act="back" aria-label="Retour">${I.back}</button>`;
 const greeting = () => { const h = new Date().getHours(); return h >= 4 && h < 12 ? 'Bonjour,' : h >= 12 && h < 18 ? 'Bon après-midi,' : 'Bonsoir,'; };
 
@@ -419,8 +430,8 @@ function homeView() {
   const prayerCard = prayer ? `
     <section class="pcard" aria-label="Horaires de prière">
       <div class="pnext"><small class="muted">Prochaine prière${np.tomorrow ? ' · demain' : ''}</small><b>${np.l} · ${np.at}</b><span class="pleft" id="pleft" data-k="${np.k}">dans ${leftLabel(np.left)}</span></div>
-      <div class="prow">${PRAYERS.map(([k, l]) => `<span class="${k === np.k ? 'on' : ''}"><small>${l}</small>${prayer.t[k]}</span>`).join('')}</div>
-      <a class="pmeth" href="#/profil">${esc((METHODS.find(([v]) => v === prayer.pm && v !== 'auto') || [0, prayer.m || 'Méthode de calcul'])[1])}${prayer.asr ? ' · Asr hanafite' : ''} · <u>changer</u></a>
+      <div class="prow">${PRAYERS.map(([k, l]) => `<span class="${k === np.k ? 'on' : ''}"><small>${l}</small>${pt(k)}</span>`).join('')}</div>
+      <a class="pmeth" href="#/profil">${esc((METHODS.find(([v]) => v === prayer.pm && v !== 'auto') || [0, prayer.m || 'Méthode de calcul'])[1])}${prayer.asr ? ' · Asr hanafite' : ''}${prayer.tz ? ` · ${esc(prayer.tz)}` : ''} · <u>régler</u></a>
     </section>` : `
     <button class="pcard pask" data-act="prayer-on">
       <span><b>Horaires de prière</b><small class="muted">Active-les pour voir la prochaine prière. Le thème Auto suivra aussi Fajr et Maghrib.</small></span>
@@ -576,14 +587,16 @@ function profileView() {
     <h2 class="sec">Horaires de prière</h2>
     ${prayer ? `<div class="swrow"><span><b>Activés</b><small>Ta position arrondie reste sur l'appareil.</small></span><button class="btn-line" data-act="prayer-off">Désactiver</button></div>
     <p class="lbl">Méthode de calcul · choisis celle de ta mosquée</p>
-    <select class="field pselect" id="pm" aria-label="Méthode de calcul">${METHODS.map(([v, l]) => `<option value="${v}" ${prefs.pm === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <select class="field pselect" id="pm" aria-label="Méthode de calcul">${METHODS.map(([v, l]) => `<option value="${v}" ${prefs.method === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <p class="lbl">Heure du Asr</p>
-    <div class="seg" role="radiogroup" aria-label="Heure du Asr">${[[0, 'Standard'], [1, 'Hanafite']].map(([v, l]) => `<button role="radio" aria-checked="${prefs.asr === v}" data-act="set" data-k="asr" data-v="${v}">${l}</button>`).join('')}</div>` : `<div class="swrow"><span><b>Désactivés</b><small>Nūn demande ta position une seule fois, l'arrondit, puis calcule les horaires.</small></span><button class="btn-line" data-act="prayer-on">Activer</button></div>`}
+    <div class="seg" role="radiogroup" aria-label="Heure du Asr">${[[0, 'Standard'], [1, 'Hanafite']].map(([v, l]) => `<button role="radio" aria-checked="${prefs.asr === v}" data-act="set" data-k="asr" data-v="${v}">${l}</button>`).join('')}</div>
+    <p class="lbl">Ajuster sur ta mosquée · en minutes</p>
+    <div class="tune">${PRAYERS.map(([k, l]) => { const o = prefs.tune[k] || 0; return `<div><small>${l}</small><b>${pt(k)}</b><span><button data-act="tune" data-k="${k}" data-v="-1" aria-label="${l} une minute plus tôt">−</button><i>${o > 0 ? '+' : ''}${o}</i><button data-act="tune" data-k="${k}" data-v="1" aria-label="${l} une minute plus tard">+</button></span></div>`; }).join('')}</div>` : `<div class="swrow"><span><b>Désactivés</b><small>Nūn demande ta position une seule fois, l'arrondit, puis calcule les horaires.</small></span><button class="btn-line" data-act="prayer-on">Activer</button></div>`}
     <h2 class="sec">Marque-pages</h2>
     ${mk.length ? `<ul class="list">${mk.map(([s, i]) => `<li><a class="srow" href="#/lire/${s}/${i + 1}"><span class="n">${s}:${i + 1}</span><span class="t"><b>${NAMES_LATIN[s - 1]}</b><small>verset ${i + 1}</small></span><span class="ar" lang="ar" dir="rtl">${NAMES_AR[s - 1]}</span></a></li>`).join('')}</ul>` : '<p class="muted" style="font-size:14px">Touche un verset dans Lire puis « Marquer » pour le retrouver ici.</p>'}
     <h2 class="sec">Apparence</h2>
     <div class="seg" role="radiogroup" aria-label="Thème">${[['nuit', 'Nuit'], ['jour', 'Jour'], ['auto', 'Auto']].map(([v, l]) => `<button role="radio" aria-checked="${prefs.theme === v}" data-act="set" data-k="theme" data-v="${v}">${l}</button>`).join('')}</div>
-    <p class="muted" style="font-size:12px;margin:8px 2px 0">Auto : ${prayer ? `jour de Fajr (${prayer.t.Fajr}) à Maghrib (${prayer.t.Maghrib})` : "jour de 6 h à 18 h"}, nuit le reste du temps.</p>
+    <p class="muted" style="font-size:12px;margin:8px 2px 0">Auto : ${prayer ? `jour de Fajr (${pt('Fajr')}) à Maghrib (${pt('Maghrib')})` : "jour de 6 h à 18 h"}, nuit le reste du temps.</p>
     <h2 class="sec">Voix par défaut</h2>
     <div class="voices hide-sb" role="radiogroup" aria-label="Voix par défaut">${RECITERS.map((r) => `<button class="voice" role="radio" aria-checked="${prefs.reciter === r.id}" data-act="set" data-k="reciter" data-v="${r.id}"><span class="av" style="--tone:${r.tone}">${r.photo ? `<img src="${r.photo}" alt="">` : ''}</span>${esc(r.short)}</button>`).join('')}</div>
     <h2 class="sec">Écoute et lecture</h2>
@@ -642,8 +655,8 @@ function renderPlayer() {
   const paused = !st.r || A().paused;
   el.classList.toggle('paused', paused);
   el.innerHTML = `
-    <div class="p-art" style="--tone:${surahTone(cur.s)}"><span class="glow"></span>
-      <div class="names"><small lang="ar" dir="rtl">سورة</small><span lang="ar" dir="rtl">${NAMES_AR[cur.s - 1]}</span></div><span class="fade"></span></div>
+    <div class="p-art ${rev(cur.s)}" style="--tone:${surahTone(cur.s)}"><span class="glow"></span>
+      <div class="names"><small lang="ar" dir="rtl">${isMedinan(cur.s) ? 'سورة مدنية' : 'سورة مكية'}</small><span lang="ar" dir="rtl">${NAMES_AR[cur.s - 1]}</span><em>${isMedinan(cur.s) ? 'Médinoise' : 'Mecquoise'}</em></div><span class="fade"></span></div>
     <div class="p-bar"><button class="glass-btn" data-act="close" aria-label="Fermer le lecteur">${I.down}</button>
       <span style="display:flex;gap:8px"><button class="glass-btn" data-act="share-surah" aria-label="Partager la sourate">${I.share}</button><button class="glass-btn only-desk" data-act="fullscreen" aria-label="Plein écran">${I.full}</button><button class="glass-btn" data-act="theme-cycle" aria-label="Changer de thème">${I.moon}</button></span></div>
     <div class="p-side">
@@ -894,6 +907,7 @@ document.addEventListener('click', async (e) => {
       else render();
       break;
     case 'prayer-on': toast('Calcul des horaires…'); enablePrayer(); break;
+    case 'tune': prefs.tune = { ...prefs.tune, [d.k]: (prefs.tune[d.k] || 0) + +d.v }; savePrefs(); render(); break;
     case 'prayer-off': prayer = null; ls.set('nun.prayer', null); render(); break;
     case 'khatm':
       if (khatm.has(s)) { khatm.delete(s); ls.set('nun.khatm', [...khatm]); toast('Sourate décochée.'); } else finishSurah(s);
@@ -957,7 +971,7 @@ setInterval(() => {
 }, 60000);
 document.addEventListener('change', (e) => {
   if (e.target.id !== 'pm') return;
-  prefs.pm = /^\d+$/.test(e.target.value) ? +e.target.value : e.target.value;
+  prefs.method = /^\d+$/.test(e.target.value) ? +e.target.value : e.target.value;
   savePrefs();
   toast('Recalcul des horaires…');
   refreshPrayer();

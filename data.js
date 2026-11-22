@@ -36,9 +36,11 @@ export const NAMES_AR = 'الفاتحة البقرة آل_عمران النسا�
 
 export const NAMES_LATIN = "Al-Fatiha|Al-Baqara|Al-Imran|An-Nisa|Al-Ma'ida|Al-An'am|Al-A'raf|Al-Anfal|At-Tawba|Yunus|Hud|Yusuf|Ar-Ra'd|Ibrahim|Al-Hijr|An-Nahl|Al-Isra|Al-Kahf|Maryam|Ta-Ha|Al-Anbiya|Al-Hajj|Al-Mu'minun|An-Nur|Al-Furqan|Ash-Shu'ara|An-Naml|Al-Qasas|Al-Ankabut|Ar-Rum|Luqman|As-Sajda|Al-Ahzab|Saba|Fatir|Ya-Sin|As-Saffat|Sad|Az-Zumar|Ghafir|Fussilat|Ash-Shura|Az-Zukhruf|Ad-Dukhan|Al-Jathiya|Al-Ahqaf|Muhammad|Al-Fath|Al-Hujurat|Qaf|Adh-Dhariyat|At-Tur|An-Najm|Al-Qamar|Ar-Rahman|Al-Waqi'a|Al-Hadid|Al-Mujadila|Al-Hashr|Al-Mumtahana|As-Saff|Al-Jumu'a|Al-Munafiqun|At-Taghabun|At-Talaq|At-Tahrim|Al-Mulk|Al-Qalam|Al-Haqqa|Al-Ma'arij|Nuh|Al-Jinn|Al-Muzzammil|Al-Muddaththir|Al-Qiyama|Al-Insan|Al-Mursalat|An-Naba|An-Nazi'at|Abasa|At-Takwir|Al-Infitar|Al-Mutaffifin|Al-Inshiqaq|Al-Buruj|At-Tariq|Al-A'la|Al-Ghashiya|Al-Fajr|Al-Balad|Ash-Shams|Al-Layl|Ad-Duha|Ash-Sharh|At-Tin|Al-Alaq|Al-Qadr|Al-Bayyina|Az-Zalzala|Al-Adiyat|Al-Qari'a|At-Takathur|Al-Asr|Al-Humaza|Al-Fil|Quraysh|Al-Ma'un|Al-Kawthar|Al-Kafirun|An-Nasr|Al-Masad|Al-Ikhlas|Al-Falaq|An-Nas".split('|');
 
-// Pochettes : une couleur sourde par sourate, en boucle.
-const TONES = ['#8a4a24', '#1f5e5a', '#2f3a7a', '#7a3550', '#4f5a2a', '#2c4f6e', '#4e2d62', '#9a5328'];
-export const surahTone = (n) => TONES[(n - 1) % TONES.length];
+// Pochettes : deux seulement, selon le lieu de révélation (classement Tanzil, celui d'alquran.cloud).
+const MEDINAN = new Set([2, 3, 4, 5, 8, 9, 13, 22, 24, 33, 47, 48, 49, 55, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 76, 98, 99, 110]);
+export const isMedinan = (n) => MEDINAN.has(n);
+// Mecquoise : sable et pierre de La Mecque. Médinoise : vert de la mosquée du Prophète.
+export const surahTone = (n) => (MEDINAN.has(n) ? '#1d5a45' : '#8c5426');
 
 
 export const CREDITS = [
