@@ -401,3 +401,27 @@ html[data-rt] .mini .t small { color: var(--ink); opacity: .7; }
 .tune span { display: flex; align-items: center; }
 .tune button { width: 26px; height: 32px; font-size: 18px; color: var(--accent); }
 .tune i { min-width: 22px; text-align: center; font-style: normal; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Phonétique */
+.vtext .ph, .p-verse .ph { display: block; margin: 6px 0 0; font-size: 15px; line-height: 1.5; font-style: italic; color: var(--ink); opacity: .78; text-align: left; }
+.p-verse .ph { text-align: center; font-size: 14px; }
+.flow-ph { font-style: italic; color: var(--ink); opacity: .78; }
+
+/* Tajwid en couleur (couleurs usuelles des mushafs tajwid, adaptées aux deux thèmes) */
+:root, [data-theme="nuit"] { --tj-mute: #8a8a93; --tj-madd: #74a6ff; --tj-maddl: #b192ff; --tj-qal: #ff6f6f; --tj-ghun: #ffa552; --tj-ikh: #e586e0; --tj-idg: #62d390; --tj-iql: #52d3ff; }
+[data-theme="jour"] { --tj-mute: #9b948b; --tj-madd: #2c5fd4; --tj-maddl: #5b3cc4; --tj-qal: #c91f1f; --tj-ghun: #cc6a12; --tj-ikh: #a32a9e; --tj-idg: #1d8a4b; --tj-iql: #0b88b8; }
+.tj-h, .tj-s, .tj-l { color: var(--tj-mute); }
+.tj-n, .tj-p { color: var(--tj-madd); }
+.tj-o, .tj-m { color: var(--tj-maddl); }
+.tj-q { color: var(--tj-qal); }
+.tj-g { color: var(--tj-ghun); }
+.tj-f, .tj-c { color: var(--tj-ikh); }
+.tj-a, .tj-u, .tj-w, .tj-d, .tj-b { color: var(--tj-idg); }
+.tj-i { color: var(--tj-iql); }
+.tj-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; margin: 14px 0 0; font-size: 12px; color: var(--muted); }
+.tj-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.tj-legend i { font-style: normal; font-size: 10px; }
+
+/* Favoris */
+.round[data-act="fav"][aria-pressed="true"] { color: var(--accent); }
+.tile .art { border-radius: 20px; }

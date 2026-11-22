@@ -8,7 +8,20 @@ const pad3 = (n) => String(n).padStart(3, '0');
 const clampSurah = (n) => Math.min(114, Math.max(1, Math.round(n) || 1));
 const RBY = Object.fromEntries(RECITERS.map((r) => [r.id, r]));
 const BISM = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
-const BISM_FR = "Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux.";
+// Traductions proposées (éditions alquran.cloud) avec leur Basmala, lue avant chaque sourate.
+const LANGS = [
+  ['fr.hamidullah', 'Français · Hamidullah', "Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux."],
+  ['en.sahih', 'English · Saheeh International', 'In the name of Allah, the Entirely Merciful, the Especially Merciful.'],
+  ['tr.diyanet', 'Türkçe · Diyanet', "Rahman ve Rahim olan Allah'ın adıyla:"],
+  ['es.cortes', 'Español · Julio Cortés', '¡En el nombre de Alá, el Compasivo, el Misericordioso!'],
+  ['de.bubenheim', 'Deutsch · Bubenheim & Elyas', 'Im Namen Allahs, des Allerbarmers, des Barmherzigen.'],
+  ['nl.siregar', 'Nederlands · Siregar', 'In de naam van Allah, de Erbarmer, de Meest Barmhartige.'],
+  ['id.indonesian', 'Bahasa Indonesia', 'Dengan menyebut nama Allah Yang Maha Pemurah lagi Maha Penyayang.'],
+  ['bs.korkut', 'Bosanski · Besim Korkut', 'U ime Allaha, Milostivog, Samilosnog!'],
+  ['sq.ahmeti', 'Shqip · Sherif Ahmeti', 'Me emrin e All-llahut, Mëshiruesit, Mëshirëbërësit!'],
+  ['ru.kuliev', 'Русский · Эльмир Кулиев', 'Во имя Аллаха, Милостивого, Милосердного!']
+];
+const BISM_PH = 'Bismillaahir Rahmaanir Raheem';
 const hasBism = (s) => s !== 1 && s !== 9;
 const today = () => new Date().toLocaleDateString('sv-SE'); // AAAA-MM-JJ à l'heure locale (pas UTC)
 
@@ -18,8 +31,9 @@ const ls = {
 };
 
 // ---------- Préférences et données locales (rien n'est envoyé) ----------
-const DEFAULTS = { theme: 'auto', reciter: 'alafasy', size: 28, font: 0, spacing: 1, tr: true, follow: true, chain: true, flow: false, method: 'auto', asr: 0, tune: {}, followed: ['alafasy', 'husary', 'muaiqly', 'minshawi'] };
+const DEFAULTS = { theme: 'auto', reciter: 'alafasy', size: 28, font: 0, spacing: 1, tr: true, follow: true, chain: true, flow: false, method: 'auto', asr: 0, tune: {}, tl: 'fr.hamidullah', ph: false, tajwid: false, rate: 1, followed: ['alafasy', 'husary', 'muaiqly', 'minshawi'] };
 const prefs = { ...DEFAULTS, ...ls.get('nun.prefs', {}) };
+const lang = () => LANGS.find(([id]) => id === prefs.tl) || LANGS[0];
 if (!RBY[prefs.reciter]) prefs.reciter = 'alafasy';
 const savePrefs = () => ls.set('nun.prefs', prefs);
 let last = ls.get('nun.last', null);
@@ -125,6 +139,8 @@ const I = {
   share: svg('<path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'),
   copy: svg('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
   mark: svg('<path d="M6 3h12v18l-6-4-6 4z"/>'),
+  heart: svg('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'),
+  heartOn: svg('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>', true),
   marked: svg('<path d="M6 3h12v18l-6-4-6 4z"/>', true),
   image: svg('<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>'),
   logo: '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 16a14 14 0 0 0 28 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="20" cy="9" r="4" fill="var(--accent)"/></svg>'
@@ -134,21 +150,27 @@ const portrait = (r) => (r.photo ? `<img class="portrait" src="${r.photo}" alt="
 
 // ---------- Texte (alquran.cloud : texte uthmani + traduction Hamidullah) ----------
 const textCache = new Map();
+// fr : la traduction choisie (français par défaut) · ph : phonétique · tj : texte balisé pour le tajwid.
 function getSurah(n) {
-  if (textCache.has(n)) return textCache.get(n);
-  const p = fetch(`https://api.alquran.cloud/v1/surah/${n}/editions/quran-uthmani,fr.hamidullah`)
+  const tl = lang()[0], key = `${n}|${tl}`;
+  if (textCache.has(key)) return textCache.get(key);
+  const p = fetch(`https://api.alquran.cloud/v1/surah/${n}/editions/quran-uthmani,${tl},en.transliteration,quran-tajweed`)
     .then((res) => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
     .then((j) => {
-      const [ar, fr] = j.data;
+      const [ar, fr, ph, tj] = j.data;
       return ar.ayahs.map((a, i) => ({
         ar: n !== 1 && i === 0 && a.text.startsWith(BISM) ? a.text.slice(BISM.length).trim() : a.text,
-        fr: fr.ayahs[i].text, page: a.page, juz: a.juz
+        fr: fr.ayahs[i].text, ph: ph.ayahs[i].text, tj: tj.ayahs[i].text, page: a.page, juz: a.juz
       }));
     });
-  textCache.set(n, p);
-  p.catch(() => textCache.delete(n));
+  textCache.set(key, p);
+  p.catch(() => textCache.delete(key));
   return p;
 }
+// Tajwid : l'édition quran-tajweed balise chaque règle ainsi : [code[texte] ou [code:id[texte].
+const tajwid = (t) => esc(t).replace(/\[([a-z])(?::\d+)?\[([^\]]*)\]/g, '<span class="tj-$1">$2</span>');
+const arHtml = (a) => (prefs.tajwid && a.tj ? tajwid(a.tj) : esc(a.ar));
+const TJ_LEGEND = [['n', 'Madd'], ['o', 'Madd long'], ['g', 'Ghunna'], ['f', 'Ikhfa'], ['a', 'Idgham'], ['i', 'Iqlab'], ['q', 'Qalqala'], ['h', 'Muette']];
 
 // Verset du jour : le même pour tout le monde ce jour-là, sans serveur.
 function verseOfDay() {
@@ -180,6 +202,9 @@ async function loadInto(k, u) {
   } catch { /* cache illisible : on lit en ligne */ }
   players[k].src = u;
 }
+// La vitesse est remise à zéro à chaque changement de source : on la réapplique.
+const applyRate = () => players.forEach((p) => { p.defaultPlaybackRate = prefs.rate; p.playbackRate = prefs.rate; });
+players.forEach((p) => p.addEventListener('loadedmetadata', applyRate));
 
 function nextItem() {
   if (st.pre) return { pre: false, s: st.s, i: 0 };
@@ -212,9 +237,18 @@ async function startAyah() {
   preloadNext();
 }
 
+// Favoris (« récitateur:sourate ») et écoutés récemment, gardés sur l'appareil.
+const favs = new Set(ls.get('nun.favs', []));
+let recent = ls.get('nun.recent', []);
+function pushRecent(r, s) {
+  recent = [{ r, s }, ...recent.filter((x) => x.r !== r || x.s !== s)].slice(0, 12);
+  ls.set('nun.recent', recent);
+}
+
 function play(r, s, i = 0) {
   st.r = RBY[r] ? r : prefs.reciter;
   st.s = clampSurah(s);
+  pushRecent(st.r, st.s);
   st.i = Math.min(Math.max(0, i), VERSES[st.s - 1] - 1);
   st.pre = st.i === 0 && hasBism(st.s);
   st.repLeft = st.rep;
@@ -413,6 +447,12 @@ const surahArt = (s) => `<span class="art ${rev(s)}" style="--tone:${surahTone(s
 const backBtn = (cls = 'icon-btn') => `<button class="${cls}" data-act="back" aria-label="Retour">${I.back}</button>`;
 const greeting = () => { const h = new Date().getHours(); return h >= 4 && h < 12 ? 'Bonjour,' : h >= 12 && h < 18 ? 'Bon après-midi,' : 'Bonsoir,'; };
 
+// Rangée de pochettes (récents, favoris) : un appui lance la sourate avec ce récitateur.
+const shelf = (title, items) => {
+  const ok = items.filter((x) => RBY[x.r] && x.s >= 1 && x.s <= 114);
+  return ok.length ? `<h2 class="sec">${title}</h2><div class="tiles hide-sb">${ok.map(({ r, s }) => `
+    <button class="tile" data-act="play" data-r="${r}" data-s="${s}" aria-label="Écouter ${NAMES_LATIN[s - 1]} par ${esc(RBY[r].name)}">${surahArt(s)}<b>${NAMES_LATIN[s - 1]}</b><small>${esc(RBY[r].short)}</small></button>`).join('')}</div>` : '';
+};
 function homeView() {
   const cards = RECITERS.map((r, k) => `
     <a class="rcard ${k === 0 ? 'on' : ''}" href="#/recitateur/${r.id}" style="--tone:${r.tone}" aria-label="Voir les sourates de ${esc(r.name)}">
@@ -445,6 +485,8 @@ function homeView() {
     <section aria-label="Récitateurs"><div class="carousel hide-sb" id="car">${cards}</div>
       <div class="dots" aria-hidden="true">${RECITERS.map((_, k) => `<i class="${k === 0 ? 'on' : ''}"></i>`).join('')}</div></section>
     ${resume}
+    ${shelf('Écoutés récemment', recent.slice(1))}
+    ${shelf('Tes favoris', [...favs].reverse().map((k) => { const [r, s] = k.split(':'); return { r, s: +s }; }))}
     ${prayerCard}
     <section class="vday" style="--tone:${surahTone(vd.s)}" aria-label="Verset du jour">
       <p class="vday-k">Verset du jour · ${NAMES_LATIN[vd.s - 1]} ${vd.s}:${vd.i + 1}</p>
@@ -538,15 +580,18 @@ function fillRead() {
     const cur = st.r && st.s === n && prefs.follow && !st.pre ? st.i : -1;
     $('#rmeta').textContent = `Sourate ${n} · page ${v[0].page} · juz' ${v[0].juz}`;
     const head = `<h1 class="two" style="margin-top:26px;font-size:30px">${NAMES_LATIN[n - 1]}<br><span lang="ar" dir="rtl" class="ar">سورة ${NAMES_AR[n - 1]}</span></h1>
-      ${hasBism(n) ? `<p class="bism-line ar" lang="ar" dir="rtl">${BISM}</p>` : ''}`;
+      ${hasBism(n) ? `<p class="bism-line ar" lang="ar" dir="rtl">${BISM}</p>` : ''}
+      ${prefs.tajwid ? `<p class="tj-legend">${TJ_LEGEND.map(([c, l]) => `<span><i class="tj-${c}">●</i>${l}</span>`).join('')}</p>` : ''}`;
     if (prefs.flow) {
-      box.innerHTML = `${head}<p class="flow" lang="ar" dir="rtl" style="${style}">${v.map((a, i) => `<button class="fv ${i === cur ? 'on' : ''}" data-i="${i}" data-act="verse" data-s="${n}" aria-label="Verset ${i + 1}">${esc(a.ar)}<span class="fn" aria-hidden="true">${i + 1}</span></button>`).join(' ')}</p>
+      box.innerHTML = `${head}<p class="flow" lang="ar" dir="rtl" style="${style}">${v.map((a, i) => `<button class="fv ${i === cur ? 'on' : ''}" data-i="${i}" data-act="verse" data-s="${n}" aria-label="Verset ${i + 1}">${arHtml(a)}<span class="fn" aria-hidden="true">${i + 1}</span></button>`).join(' ')}</p>
+        ${prefs.ph ? `<p class="flow-fr flow-ph">${v.map((a, i) => `<span><b>${i + 1}</b> ${esc(a.ph)}</span>`).join(' ')}</p>` : ''}
         ${prefs.tr ? `<p class="flow-fr">${v.map((a, i) => `<span><b>${i + 1}</b> ${esc(a.fr)}</span>`).join(' ')}</p>` : ''}`;
     } else {
       box.innerHTML = `${head}<ol class="vlist ${cur >= 0 ? 'follow' : ''}">${v.map((a, i) => `<li class="${i === cur ? 'on' : ''}" data-i="${i}">
           <div class="vhead"><button data-act="playv" data-s="${n}" data-i="${i}" aria-label="Écouter à partir du verset ${i + 1}">${String(i + 1).padStart(2, '0')}</button>${marks.has(n + ':' + i) ? `<span class="vmark" aria-label="Verset marqué">${I.marked}</span>` : ''}</div>
           <button class="vtext" data-act="verse" data-s="${n}" data-i="${i}" aria-label="Actions pour le verset ${i + 1}">
-            <span class="arv" lang="ar" dir="rtl" style="${style}">${esc(a.ar)}</span>
+            <span class="arv" lang="ar" dir="rtl" style="${style}">${arHtml(a)}</span>
+            ${prefs.ph ? `<span class="ph">${esc(a.ph)}</span>` : ''}
             ${prefs.tr ? `<span class="fr">${esc(a.fr)}</span>` : ''}
           </button></li>`).join('')}</ol>`;
     }
@@ -650,8 +695,9 @@ function renderPlayer() {
   const v = st.verses && st.vs === cur.s ? st.verses[cur.i] : null;
   if (!v) getSurah(cur.s).then((vs) => { st.verses = vs; st.vs = cur.s; if (st.open) renderPlayer(); }).catch(() => {});
   const pre = st.r && st.pre;
-  const ar = pre ? BISM : v ? v.ar : '…';
-  const fr = pre ? BISM_FR : v ? v.fr : '';
+  const ar = pre ? esc(BISM) : v ? arHtml(v) : '…';
+  const fr = pre ? lang()[2] : v ? v.fr : '';
+  const ph = pre ? BISM_PH : v ? v.ph : '';
   const paused = !st.r || A().paused;
   el.classList.toggle('paused', paused);
   el.innerHTML = `
@@ -660,13 +706,14 @@ function renderPlayer() {
     <div class="p-bar"><button class="glass-btn" data-act="close" aria-label="Fermer le lecteur">${I.down}</button>
       <span style="display:flex;gap:8px"><button class="glass-btn" data-act="share-surah" aria-label="Partager la sourate">${I.share}</button><button class="glass-btn only-desk" data-act="fullscreen" aria-label="Plein écran">${I.full}</button><button class="glass-btn" data-act="theme-cycle" aria-label="Changer de thème">${I.moon}</button></span></div>
     <div class="p-side">
+      <button class="round" data-act="fav" aria-pressed="${favs.has(cur.r + ':' + cur.s)}" aria-label="${favs.has(cur.r + ':' + cur.s) ? 'Retirer des favoris' : 'Ajouter aux favoris'}">${favs.has(cur.r + ':' + cur.s) ? I.heartOn : I.heart}</button>
       <button class="round" data-act="rep" aria-label="Répéter chaque verset (${st.rep} fois)">${I.repeat}${st.rep > 1 ? `<span class="badge">${st.rep}</span>` : ''}</button>
       <button class="round" data-act="flip" data-k="tr" aria-pressed="${prefs.tr}" aria-label="Traduction">${I.bubble}</button>
       <a class="round amber" href="#/lire/${cur.s}/${cur.i + 1}" data-act="close-go" aria-label="Lire le texte">${I.book}</a>
     </div>
     <div class="p-body">
       <div class="p-title"><h1>${NAMES_LATIN[cur.s - 1]}<br><a href="#/recitateur/${r.id}" data-act="close-go" class="p-reciter">${esc(r.name)}</a></h1></div>
-      <button class="p-verse" data-act="verse" data-s="${cur.s}" data-i="${cur.i}" aria-label="Actions pour ce verset" ${pre ? 'disabled' : ''}><span class="arv" lang="ar" dir="rtl">${esc(ar)}</span>${prefs.tr && fr ? `<span class="fr">${esc(fr)}</span>` : ''}</button>
+      <button class="p-verse" data-act="verse" data-s="${cur.s}" data-i="${cur.i}" aria-label="Actions pour ce verset" ${pre ? 'disabled' : ''}><span class="arv" lang="ar" dir="rtl">${ar}</span>${prefs.ph && ph ? `<span class="ph">${esc(ph)}</span>` : ''}${prefs.tr && fr ? `<span class="fr">${esc(fr)}</span>` : ''}</button>
       <div>
         <div class="scrub"><span>${pre ? 'Basmala' : 'Verset ' + (cur.i + 1)}</span>
           <span class="track" data-act="seek" role="slider" tabindex="0" aria-label="Position dans la sourate" aria-valuemin="1" aria-valuemax="${n}" aria-valuenow="${cur.i + 1}"><span class="fill js-fill"></span><span class="knob js-knob"></span></span>
@@ -680,6 +727,7 @@ function renderPlayer() {
       <div class="p-extra">
         <button class="chip only-desk" data-act="rep" aria-pressed="${st.rep > 1}">${I.repeat}Répéter ×${st.rep}</button>
         <button class="chip only-desk" data-act="flip" data-k="tr" aria-pressed="${prefs.tr}">${I.bubble}Traduction</button>
+        <button class="chip" data-act="rate" aria-label="Vitesse de lecture ${prefs.rate} fois">Vitesse ${String(prefs.rate).replace('.', ',')}×</button>
         <button class="chip" data-act="timer" aria-pressed="${!!st.timer}">${I.timer}${st.timer ? `Arrêt dans ${st.timer} min` : 'Minuteur'}</button>
         <button class="chip only-desk" data-act="close-go" data-href="#/lire/${cur.s}/${cur.i + 1}">${I.book}Lire</button>
       </div>
@@ -699,10 +747,13 @@ function renderSheet() {
       <p class="lbl">Écriture arabe</p><div class="opts" role="radiogroup" aria-label="Écriture arabe">${FONTS.map(([f, l], k) => opt('font', k, `<span class="ar" style="font-family:${f}">بِسْمِ</span>${l}`, l)).join('')}</div>
       <p class="lbl">Interligne</p><div class="seg" style="margin:0" role="radiogroup" aria-label="Interligne">${SPACING.map(([l], k) => `<button role="radio" aria-checked="${prefs.spacing === k}" data-act="set" data-k="spacing" data-v="${k}">${l}</button>`).join('')}</div>
       <div style="margin-top:10px">
-        ${sw('tr', 'Traduction', 'La traduction française sous le texte')}
+        ${sw('tajwid', 'Tajwid en couleur', 'Les règles de récitation colorées, avec la légende')}
+        ${sw('ph', 'Phonétique', 'La prononciation en lettres latines sous l’arabe')}
+        ${sw('tr', 'Traduction', 'Le sens du verset sous le texte')}
         ${sw('follow', 'Suivre la récitation', 'Le verset récité est mis en avant')}
-        ${sw('tajwid', 'Tajwid en couleur', 'Bientôt, depuis une source vérifiée', true)}
       </div>
+      <p class="lbl">Langue de la traduction</p>
+      <select class="field pselect" id="tl" aria-label="Langue de la traduction">${LANGS.map(([id, l]) => `<option value="${id}" ${lang()[0] === id ? 'selected' : ''}>${l}</option>`).join('')}</select>
     </section>`;
   $('.sheet button')?.focus();
 }
@@ -717,7 +768,7 @@ function renderVerseSheet(s, i) {
       <section class="sheet vsheet hide-sb" role="dialog" aria-modal="true" aria-label="Verset ${i + 1}" style="--tone:${surahTone(s)}">
         <span class="grab" aria-hidden="true"></span>
         <p class="vday-k">${NAMES_LATIN[s - 1]} · ${s}:${i + 1}</p>
-        <p class="vs-ar" lang="ar" dir="rtl">${esc(a.ar)}</p>
+        <p class="vs-ar" lang="ar" dir="rtl">${arHtml(a)}</p>
         <p class="vs-fr">${esc(a.fr)}</p>
         <div class="vs-grid">
           <button data-act="playv" data-s="${s}" data-i="${i}">${I.play}<span>Écouter d'ici</span></button>
@@ -840,6 +891,21 @@ document.addEventListener('click', async (e) => {
     case 'prev': goAyah(st.pre ? -1 : st.i - 1); break;
     case 'next': goAyah(st.pre ? 0 : st.i + 1); break;
     case 'rep': setRep(); break;
+    case 'rate': {
+      const R = [0.75, 1, 1.25, 1.5];
+      prefs.rate = R[(R.indexOf(prefs.rate) + 1) % R.length];
+      savePrefs(); applyRate(); renderPlayer();
+      break;
+    }
+    case 'fav': {
+      const cur = st.r ? st : last;
+      if (!cur) break;
+      const k = cur.r + ':' + cur.s;
+      if (favs.has(k)) { favs.delete(k); toast('Retiré des favoris.'); } else { favs.add(k); toast('Ajouté aux favoris.'); }
+      ls.set('nun.favs', [...favs]);
+      renderPlayer();
+      break;
+    }
     case 'timer': setTimer(); break;
     case 'open': openPlayer(); break;
     case 'close': closePlayer(); break;
@@ -933,7 +999,7 @@ function searchText(q) {
   box.innerHTML = '<p class="spin">Recherche dans le Coran…</p>';
   searchTimer = setTimeout(async () => {
     try {
-      const res = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(word)}/all/fr.hamidullah`);
+      const res = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(word)}/all/${lang()[0]}`);
       const j = res.ok ? await res.json() : null;
       if (!box.isConnected || $('#q')?.value.trim() !== word) return;
       const m = j && j.data && j.data.matches ? j.data.matches : [];
@@ -970,6 +1036,14 @@ setInterval(() => {
   if (np && el) { if (el.dataset.k !== np.k) render(); else el.textContent = `dans ${leftLabel(np.left)}`; }
 }, 60000);
 document.addEventListener('change', (e) => {
+  if (e.target.id === 'tl') {
+    prefs.tl = e.target.value;
+    savePrefs();
+    st.verses = null; st.vs = 0; // le lecteur recharge le texte dans la nouvelle langue
+    fillRead();
+    if (st.r) getSurah(st.s).then((v) => { st.verses = v; st.vs = st.s; renderPlayer(); }).catch(() => {});
+    return;
+  }
   if (e.target.id !== 'pm') return;
   prefs.method = /^\d+$/.test(e.target.value) ? +e.target.value : e.target.value;
   savePrefs();
