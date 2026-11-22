@@ -1,12 +1,13 @@
 // Service worker : l'app et les textes déjà ouverts restent disponibles hors-ligne.
 // L'audio n'est pas géré ici : l'app le range elle-même dans le cache « nun-audio » quand on télécharge une sourate.
-const SHELL = 'nun-shell-v8';
+const SHELL = 'nun-shell-v9';
 const ASSETS = [
   './', 'index.html', 'styles.css', 'app.js', 'data.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
   'portraits/alafasy.webp', 'portraits/husary.webp', 'portraits/muaiqly.webp',
   'portraits/dosari.webp', 'portraits/ghamdi.webp', 'portraits/minshawi.webp',
-  'portraits/sudais.webp', 'portraits/shuraim.webp', 'portraits/ajmi.webp', 'portraits/juhany.webp', 'portraits/hudhaify.webp', 'portraits/jibreel.webp'
+  'portraits/sudais.webp', 'portraits/shuraim.webp', 'portraits/ajmi.webp', 'portraits/juhany.webp', 'portraits/hudhaify.webp', 'portraits/jibreel.webp',
+  'portraits/qatami.webp', 'portraits/mustafaismail.webp', 'portraits/budair.webp', 'portraits/jaber.webp', 'portraits/banna.webp', 'portraits/abdulbasit.webp'
 ];
 
 self.addEventListener('install', (e) => {

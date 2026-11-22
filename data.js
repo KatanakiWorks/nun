@@ -4,7 +4,7 @@
 // L'audio vient d'everyayah.com (un fichier par verset) : https://everyayah.com/data/<dossier>/SSSAAA.mp3
 export const RECITERS = [
   { id: 'alafasy', name: 'Mishary Rashid Alafasy', short: 'Alafasy', ar: 'مشاري راشد العفاسي', country: 'Koweït', tone: '#1f5e5a', photo: 'portraits/alafasy.webp', folder: 'Alafasy_128kbps' },
-  { id: 'abdulbasit', name: 'Abdul Basit Abdus Samad', short: 'Abdul Basit', ar: 'عبد الباسط عبد الصمد', country: 'Égypte', tone: '#8a4a24', photo: null, folder: 'Abdul_Basit_Murattal_192kbps' },
+  { id: 'abdulbasit', name: 'Abdul Basit Abdus Samad', short: 'Abdul Basit', ar: 'عبد الباسط عبد الصمد', country: 'Égypte', tone: '#8a4a24', photo: 'portraits/abdulbasit.webp', folder: 'Abdul_Basit_Murattal_192kbps' },
   { id: 'husary', name: 'Mahmoud Khalil Al-Husary', short: 'Al-Husary', ar: 'محمود خليل الحصري', country: 'Égypte', tone: '#2f3a7a', photo: 'portraits/husary.webp', folder: 'Husary_128kbps' },
   { id: 'muaiqly', name: 'Maher Al-Muaiqly', short: 'Al-Muaiqly', ar: 'ماهر المعيقلي', country: 'Arabie saoudite', tone: '#7a3550', photo: 'portraits/muaiqly.webp', folder: 'MaherAlMuaiqly128kbps' },
   { id: 'dosari', name: 'Yasser Al-Dosari', short: 'Al-Dosari', ar: 'ياسر الدوسري', country: 'Arabie saoudite', tone: '#4f5a2a', photo: 'portraits/dosari.webp', folder: 'Yasser_Ad-Dussary_128kbps' },
@@ -12,7 +12,7 @@ export const RECITERS = [
   { id: 'minshawi', name: 'Mohamed Siddiq Al-Minshawi', short: 'Al-Minshawi', ar: 'محمد صديق المنشاوي', country: 'Égypte', tone: '#4e2d62', photo: 'portraits/minshawi.webp', folder: 'Minshawy_Murattal_128kbps' },
   { id: 'sudais', name: 'Abdul Rahman Al-Sudais', short: 'As-Sudais', ar: 'عبد الرحمن السديس', country: 'Arabie saoudite', tone: '#6b4a1f', photo: 'portraits/sudais.webp', folder: 'Abdurrahmaan_As-Sudais_192kbps' },
   { id: 'shuraim', name: 'Saud Al-Shuraim', short: 'Ash-Shuraim', ar: 'سعود الشريم', country: 'Arabie saoudite', tone: '#3d5a4a', photo: 'portraits/shuraim.webp', folder: 'Saood_ash-Shuraym_128kbps' },
-  { id: 'qatami', name: 'Nasser Al-Qatami', short: 'Al-Qatami', ar: 'ناصر القطامي', country: 'Arabie saoudite', tone: '#5a2d3e', photo: null, folder: 'Nasser_Alqatami_128kbps' },
+  { id: 'qatami', name: 'Nasser Al-Qatami', short: 'Al-Qatami', ar: 'ناصر القطامي', country: 'Arabie saoudite', tone: '#5a2d3e', photo: 'portraits/qatami.webp', folder: 'Nasser_Alqatami_128kbps' },
   { id: 'ajmi', name: 'Ahmed Al-Ajmi', short: 'Al-Ajmi', ar: 'أحمد بن علي العجمي', country: 'Arabie saoudite', tone: '#24506b', photo: 'portraits/ajmi.webp', folder: 'ahmed_ibn_ali_al_ajamy_128kbps' },
   { id: 'hudhaify', name: 'Ali Al-Hudhaify', short: 'Al-Hudhaify', ar: 'علي الحذيفي', country: 'Arabie saoudite', tone: '#55452a', photo: 'portraits/hudhaify.webp', folder: 'Hudhaify_128kbps' },
   { id: 'juhany', name: 'Abdullah Awad Al-Juhany', short: 'Al-Juhany', ar: 'عبد الله عواد الجهني', country: 'Arabie saoudite', tone: '#2f5a5a', photo: 'portraits/juhany.webp', folder: 'Abdullaah_3awwaad_Al-Juhaynee_128kbps' },
@@ -21,13 +21,13 @@ export const RECITERS = [
   { id: 'rifai', name: 'Hani Ar-Rifai', short: 'Ar-Rifai', ar: 'هاني الرفاعي', country: 'Arabie saoudite', tone: '#6b3b5a', photo: null, folder: 'Hani_Rifai_192kbps' },
   { id: 'abbad', name: 'Fares Abbad', short: 'Fares Abbad', ar: 'فارس عباد', country: 'Arabie saoudite', tone: '#2d5a3d', photo: null, folder: 'Fares_Abbad_64kbps' },
   { id: 'ayyub', name: 'Muhammad Ayyub', short: 'Ayyub', ar: 'محمد أيوب', country: 'Arabie saoudite', tone: '#5a4a2d', photo: null, folder: 'Muhammad_Ayyoub_128kbps' },
-  { id: 'budair', name: 'Salah Al-Budair', short: 'Al-Budair', ar: 'صلاح البدير', country: 'Arabie saoudite', tone: '#2d3d5a', photo: null, folder: 'Salah_Al_Budair_128kbps' },
-  { id: 'jaber', name: 'Ali Jaber', short: 'Ali Jaber', ar: 'علي جابر', country: 'Arabie saoudite', tone: '#5a2d2d', photo: null, folder: 'Ali_Jaber_64kbps' },
+  { id: 'budair', name: 'Salah Al-Budair', short: 'Al-Budair', ar: 'صلاح البدير', country: 'Arabie saoudite', tone: '#2d3d5a', photo: 'portraits/budair.webp', folder: 'Salah_Al_Budair_128kbps' },
+  { id: 'jaber', name: 'Ali Jaber', short: 'Ali Jaber', ar: 'علي جابر', country: 'Arabie saoudite', tone: '#5a2d2d', photo: 'portraits/jaber.webp', folder: 'Ali_Jaber_64kbps' },
   { id: 'basfar', name: 'Abdullah Basfar', short: 'Basfar', ar: 'عبد الله بصفر', country: 'Arabie saoudite', tone: '#2d5a55', photo: null, folder: 'Abdullah_Basfar_192kbps' },
   { id: 'qahtani', name: 'Khalid Al-Qahtani', short: 'Al-Qahtani', ar: 'خالد القحطاني', country: 'Arabie saoudite', tone: '#6b552d', photo: null, folder: 'Khaalid_Abdullaah_al-Qahtaanee_192kbps' },
-  { id: 'banna', name: 'Mahmoud Ali Al-Banna', short: 'Al-Banna', ar: 'محمود علي البنا', country: 'Égypte', tone: '#4a2d5a', photo: null, folder: 'Mahmoud_Ali_Al_Banna_32kbps' },
+  { id: 'banna', name: 'Mahmoud Ali Al-Banna', short: 'Al-Banna', ar: 'محمود علي البنا', country: 'Égypte', tone: '#4a2d5a', photo: 'portraits/banna.webp', folder: 'Mahmoud_Ali_Al_Banna_32kbps' },
   { id: 'tablawi', name: 'Mohamed Al-Tablawi', short: 'At-Tablawi', ar: 'محمد محمود الطبلاوي', country: 'Égypte', tone: '#3d2d4a', photo: null, folder: 'Mohammad_al_Tablaway_128kbps' },
-  { id: 'mustafaismail', name: 'Mustafa Ismail', short: 'Mustafa Ismail', ar: 'مصطفى إسماعيل', country: 'Égypte', tone: '#6b2f2f', photo: null, folder: 'Mustafa_Ismail_48kbps' }
+  { id: 'mustafaismail', name: 'Mustafa Ismail', short: 'Mustafa Ismail', ar: 'مصطفى إسماعيل', country: 'Égypte', tone: '#6b2f2f', photo: 'portraits/mustafaismail.webp', folder: 'Mustafa_Ismail_48kbps' }
 ];
 
 export const VERSES = [7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
@@ -55,5 +55,9 @@ export const CREDITS = [
   ['Al-Hudhaify', '« Ali al-Hudhayfi.jpg », آيات, CC BY 3.0'],
   ['Al-Juhany', '« Abdullah Al Juhany (Cropped).png », الشيخ هيثم الدخين, CC BY-SA 4.0'],
   ['Jibreel', '« Qari Muhammad Jebril, Ramadan 2019.png », Alhidaya Croydon, CC BY 3.0'],
-  ['Mustafa Ismail', '« Mustafa Ismail.jpg », domaine public']
+  ['Mustafa Ismail', '« Mustafa Ismail.jpg », domaine public'],
+  ['Abdul Basit', '« Abdel Basit Abdel Samad 1955.png », domaine public'],
+  ['Al-Budair', '« Salah Ibn Mohammed Al Budair.jpg », Salah Al Budair, CC BY-SA 4.0'],
+  ['Ali Jaber', '« Ali Abdullah Jaber.jpg », auteur inconnu, CC BY-SA 3.0'],
+  ['Al-Banna', '« President Sadat welcomes Sheikh Mahmoud Ali al-Banna… (cropped).jpg », domaine public']
 ];
