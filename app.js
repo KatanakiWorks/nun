@@ -27,14 +27,58 @@ if (last && (!RBY[last.r] || !VERSES[last.s - 1])) last = null;
 const downloaded = new Set(ls.get('nun.dl', []));
 const marks = new Set(ls.get('nun.marks', [])); // « sourate:verset »
 const stats = ls.get('nun.stats', { days: {}, verses: 0 });
+const khatm = new Set(ls.get('nun.khatm', [])); // sourates terminées (lues ou écoutées jusqu'au bout)
+let prayer = ls.get('nun.prayer', null); // { lat, lon, date, t: { Fajr, Dhuhr, ... } }
+
+// ---------- Khatma : progression dans tout le Coran ----------
+function finishSurah(s, silent) {
+  if (khatm.has(s)) return;
+  khatm.add(s);
+  ls.set('nun.khatm', [...khatm]);
+  if (!silent) toast(`${NAMES_LATIN[s - 1]} terminée · khatma à ${khatmPct()} %`);
+}
+const khatmPct = () => Math.round(([...khatm].reduce((a, s) => a + VERSES[s - 1], 0) / 6236) * 1000) / 10;
+
+// ---------- Horaires de prière (aladhan.com, position arrondie, gardée sur l'appareil) ----------
+const PRAYERS = [['Fajr', 'Fajr'], ['Dhuhr', 'Dhuhr'], ['Asr', 'Asr'], ['Maghrib', 'Maghrib'], ['Isha', 'Isha']];
+const dmy = (d) => `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+async function loadPrayer(lat, lon) {
+  const d = new Date();
+  const res = await fetch(`https://api.aladhan.com/v1/timings/${dmy(d)}?latitude=${lat}&longitude=${lon}&method=12`);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const t = (await res.json()).data.timings;
+  prayer = { lat, lon, date: today(), t: Object.fromEntries(PRAYERS.map(([k]) => [k, t[k].slice(0, 5)])) };
+  ls.set('nun.prayer', prayer);
+}
+function enablePrayer() {
+  if (!navigator.geolocation) return toast('La localisation n’est pas disponible sur cet appareil.');
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    try {
+      // Arrondi à ~1 km : assez précis pour les horaires, sans envoyer ta position exacte.
+      await loadPrayer(pos.coords.latitude.toFixed(2), pos.coords.longitude.toFixed(2));
+      render();
+    } catch { toast('Horaires indisponibles pour le moment. Réessaie avec une connexion.'); }
+  }, () => toast('Sans ta position, Nūn ne peut pas calculer les horaires.'), { timeout: 15000, maximumAge: 3600000 });
+}
+function nextPrayer() {
+  if (!prayer) return null;
+  const now = new Date(), m = now.getHours() * 60 + now.getMinutes();
+  for (const [k, l] of PRAYERS) { const t = toMin(prayer.t[k]); if (t > m) return { k, l, at: prayer.t[k], left: t - m }; }
+  return { k: 'Fajr', l: 'Fajr', at: prayer.t.Fajr, left: 1440 - m + toMin(prayer.t.Fajr), tomorrow: true };
+}
+const leftLabel = (min) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`);
+if (prayer && prayer.date !== today()) loadPrayer(prayer.lat, prayer.lon).then(() => render()).catch(() => {});
 
 const FONTS = [["'Amiri Quran', Amiri, serif", 'Amiri'], ["'Scheherazade New', serif", 'Scheherazade'], ["'Noto Naskh Arabic', serif", 'Naskh']];
 const SIZES = [24, 28, 32, 36];
 const SPACING = [['Serré', 1.9], ['Normal', 2.25], ['Aéré', 2.6]];
 
 function applyTheme() {
-  const h = new Date().getHours();
-  const t = prefs.theme === 'auto' ? (h >= 6 && h < 18 ? 'jour' : 'nuit') : prefs.theme;
+  const now = new Date(), m = now.getHours() * 60 + now.getMinutes();
+  // Auto : jour entre Fajr et Maghrib si les horaires sont connus, sinon de 6 h à 18 h.
+  const day = prayer && prayer.date === today() ? m >= toMin(prayer.t.Fajr) && m < toMin(prayer.t.Maghrib) : m >= 360 && m < 1080;
+  const t = prefs.theme === 'auto' ? (day ? 'jour' : 'nuit') : prefs.theme;
   document.documentElement.dataset.theme = t;
   $('meta[name="theme-color"]').content = t === 'nuit' ? '#0b0b0d' : '#f3eee7';
 }
@@ -167,7 +211,7 @@ function goAyah(i) {
   if (!st.r) return;
   const n = VERSES[st.s - 1];
   if (i < 0) { st.i = 0; st.pre = hasBism(st.s); }
-  else if (i >= n) return nextSurah();
+  else if (i >= n) { finishSurah(st.s); return nextSurah(); }
   else { st.i = i; st.pre = false; }
   st.repLeft = st.rep;
   startAyah();
@@ -364,6 +408,16 @@ function homeView() {
       <span class="go" aria-hidden="true">${I.play}</span>
     </button>` : '';
   const vd = verseOfDay();
+  const np = nextPrayer();
+  const prayerCard = prayer ? `
+    <section class="pcard" aria-label="Horaires de prière">
+      <div class="pnext"><small class="muted">Prochaine prière${np.tomorrow ? ' · demain' : ''}</small><b>${np.l} · ${np.at}</b><span class="pleft" id="pleft">dans ${leftLabel(np.left)}</span></div>
+      <div class="prow">${PRAYERS.map(([k, l]) => `<span class="${k === np.k ? 'on' : ''}"><small>${l}</small>${prayer.t[k]}</span>`).join('')}</div>
+    </section>` : `
+    <button class="pcard pask" data-act="prayer-on">
+      <span><b>Horaires de prière</b><small class="muted">Active-les pour voir la prochaine prière. Le thème Auto suivra aussi Fajr et Maghrib.</small></span>
+      <span class="btn-line" aria-hidden="true">Activer</span>
+    </button>`;
   return `
     <header class="top only-phone"><span class="logo">${I.logo}NŪN</span>
       <span style="display:flex;gap:8px"><button class="icon-btn" data-act="share-app" aria-label="Partager l'app">${I.share}</button><button class="icon-btn" data-act="theme-cycle" aria-label="Changer de thème">${I.moon}</button></span></header>
@@ -372,6 +426,7 @@ function homeView() {
     <section aria-label="Récitateurs"><div class="carousel hide-sb" id="car">${cards}</div>
       <div class="dots" aria-hidden="true">${RECITERS.map((_, k) => `<i class="${k === 0 ? 'on' : ''}"></i>`).join('')}</div></section>
     ${resume}
+    ${prayerCard}
     <section class="vday" style="--tone:${surahTone(vd.s)}" aria-label="Verset du jour">
       <p class="vday-k">Verset du jour · ${NAMES_LATIN[vd.s - 1]} ${vd.s}:${vd.i + 1}</p>
       <p class="vday-ar" lang="ar" dir="rtl" id="vday-ar">…</p>
@@ -425,6 +480,7 @@ function searchView() {
     <h1 class="two" style="margin-top:16px">Rechercher<br><span>une sourate ou une voix</span></h1>
     <label class="field" style="margin-top:20px">${I.search}<span class="sr">Recherche</span><input id="q" type="search" placeholder="Al-Kahf, 36, Alafasy…" autocomplete="off" data-r="${prefs.reciter}"></label>
     <div class="voices hide-sb" id="qvoices">${voiceChips('')}</div>
+    <div id="qtext"></div>
     <p class="muted" style="font-size:13px;margin:18px 0 0">Les sourates sont lues avec ta voix par défaut : ${esc(RBY[prefs.reciter].name)}.</p>
     <ul class="list" id="slist">${surahRows(prefs.reciter, '')}</ul>`;
 }
@@ -446,6 +502,7 @@ function readView(arg, verse) {
       ${[[false, 'Verset par verset'], [true, 'Texte continu']].map(([v, l]) => `<button role="radio" aria-checked="${prefs.flow === v}" data-act="set" data-k="flow" data-v="${v}">${l}</button>`).join('')}
     </div>
     <div id="rbody" data-s="${n}" data-goto="${verse ? +verse - 1 : ''}"><p class="spin">Chargement du texte…</p></div>
+    <button class="btn-line done-btn" data-act="khatm" data-s="${n}" aria-pressed="${khatm.has(n)}">${khatm.has(n) ? `${I.check}Sourate terminée` : 'Marquer comme terminée'}</button>
     <nav class="pager" aria-label="Sourates voisines">
       ${n > 1 ? `<a class="btn-line" href="#/lire/${n - 1}">${I.back}${NAMES_LATIN[n - 2]}</a>` : '<span></span>'}
       ${n < 114 ? `<a class="btn-line" href="#/lire/${n + 1}">${NAMES_LATIN[n]}${I.fwd}</a>` : ''}
@@ -501,11 +558,20 @@ function profileView() {
       <div><b>${stats.verses}</b><small>versets écoutés</small></div>
       <div><b>${streak}</b><small>jour${streak > 1 ? 's' : ''} d'affilée</small></div>
     </div>
+    <h2 class="sec">Ma khatma</h2>
+    <div class="khatm">
+      <div class="khead"><b>${khatmPct()} %</b><small class="muted">${khatm.size} sourate${khatm.size > 1 ? 's' : ''} sur 114 · une sourate se coche quand tu l'écoutes jusqu'au bout ou la marques dans Lire</small></div>
+      <div class="kbar" aria-hidden="true"><i style="width:${khatmPct()}%"></i></div>
+      <div class="kgrid" role="list" aria-label="Sourates terminées">${VERSES.map((_, k) => `<a role="listitem" href="#/lire/${k + 1}" class="${khatm.has(k + 1) ? 'on' : ''}" title="${NAMES_LATIN[k]}" aria-label="${NAMES_LATIN[k]}${khatm.has(k + 1) ? ', terminée' : ''}"></a>`).join('')}</div>
+      ${khatm.size ? '<button class="btn-line" data-act="khatm-reset" style="margin-top:12px">Recommencer une khatma</button>' : ''}
+    </div>
+    <h2 class="sec">Horaires de prière</h2>
+    ${prayer ? `<div class="swrow"><span><b>Activés</b><small>Calculés pour ta zone (méthode UOIF). Ta position arrondie reste sur l'appareil.</small></span><button class="btn-line" data-act="prayer-off">Désactiver</button></div>` : `<div class="swrow"><span><b>Désactivés</b><small>Nūn demande ta position une seule fois, l'arrondit, puis calcule les horaires.</small></span><button class="btn-line" data-act="prayer-on">Activer</button></div>`}
     <h2 class="sec">Marque-pages</h2>
     ${mk.length ? `<ul class="list">${mk.map(([s, i]) => `<li><a class="srow" href="#/lire/${s}/${i + 1}"><span class="n">${s}:${i + 1}</span><span class="t"><b>${NAMES_LATIN[s - 1]}</b><small>verset ${i + 1}</small></span><span class="ar" lang="ar" dir="rtl">${NAMES_AR[s - 1]}</span></a></li>`).join('')}</ul>` : '<p class="muted" style="font-size:14px">Touche un verset dans Lire puis « Marquer » pour le retrouver ici.</p>'}
     <h2 class="sec">Apparence</h2>
     <div class="seg" role="radiogroup" aria-label="Thème">${[['nuit', 'Nuit'], ['jour', 'Jour'], ['auto', 'Auto']].map(([v, l]) => `<button role="radio" aria-checked="${prefs.theme === v}" data-act="set" data-k="theme" data-v="${v}">${l}</button>`).join('')}</div>
-    <p class="muted" style="font-size:12px;margin:8px 2px 0">Auto : jour de 6 h à 18 h, nuit le reste du temps.</p>
+    <p class="muted" style="font-size:12px;margin:8px 2px 0">Auto : ${prayer ? `jour de Fajr (${prayer.t.Fajr}) à Maghrib (${prayer.t.Maghrib})` : "jour de 6 h à 18 h"}, nuit le reste du temps.</p>
     <h2 class="sec">Voix par défaut</h2>
     <div class="voices hide-sb" role="radiogroup" aria-label="Voix par défaut">${RECITERS.map((r) => `<button class="voice" role="radio" aria-checked="${prefs.reciter === r.id}" data-act="set" data-k="reciter" data-v="${r.id}"><span class="av" style="--tone:${r.tone}">${r.photo ? `<img src="${r.photo}" alt="">` : ''}</span>${esc(r.short)}</button>`).join('')}</div>
     <h2 class="sec">Écoute et lecture</h2>
@@ -775,17 +841,52 @@ document.addEventListener('click', async (e) => {
       else if (st.open) renderPlayer();
       else render();
       break;
+    case 'prayer-on': toast('Calcul des horaires…'); enablePrayer(); break;
+    case 'prayer-off': prayer = null; ls.set('nun.prayer', null); render(); break;
+    case 'khatm':
+      if (khatm.has(s)) { khatm.delete(s); ls.set('nun.khatm', [...khatm]); toast('Sourate décochée.'); } else finishSurah(s);
+      el.setAttribute('aria-pressed', khatm.has(s));
+      el.innerHTML = khatm.has(s) ? `${I.check}Sourate terminée` : 'Marquer comme terminée';
+      break;
+    case 'khatm-reset':
+      if (confirm('Recommencer ta khatma ? Les sourates cochées seront décochées.')) { khatm.clear(); ls.set('nun.khatm', []); render(); }
+      break;
     case 'sheet': renderSheet(); break;
     case 'close-sheet': closeSheet(); break;
   }
 });
+
+// Recherche dans tout le Coran (traduction française), via alquran.cloud.
+let searchTimer = 0;
+function searchText(q) {
+  const box = $('#qtext');
+  if (!box) return;
+  clearTimeout(searchTimer);
+  const word = q.trim();
+  if (word.length < 3 || /^\d+$/.test(word)) { box.innerHTML = ''; return; }
+  box.innerHTML = '<p class="spin">Recherche dans le Coran…</p>';
+  searchTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(word)}/all/fr.hamidullah`);
+      const j = res.ok ? await res.json() : null;
+      if (!box.isConnected || $('#q')?.value.trim() !== word) return;
+      const m = j && j.data && j.data.matches ? j.data.matches : [];
+      const rx = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      box.innerHTML = m.length ? `<h2 class="sec">Dans le Coran <span class="muted" style="font-size:14px;font-weight:500">${j.data.count} verset${j.data.count > 1 ? 's' : ''}</span></h2>
+        <ul class="hits">${m.slice(0, 40).map((h) => `<li><a href="#/lire/${h.surah.number}/${h.numberInSurah}"><small>${NAMES_LATIN[h.surah.number - 1]} · ${h.surah.number}:${h.numberInSurah}</small><span>${esc(h.text).replace(rx, (x) => `<mark>${x}</mark>`)}</span></a></li>`).join('')}</ul>`
+        : '<p class="muted" style="margin-top:18px">Aucun verset ne contient ce mot.</p>';
+    } catch {
+      if (box.isConnected) box.innerHTML = '<p class="muted" style="margin-top:18px">La recherche dans le texte demande une connexion.</p>';
+    }
+  }, 450);
+}
 
 document.addEventListener('input', (e) => {
   if (e.target.id !== 'q') return;
   const q = e.target.value;
   $('#slist').innerHTML = surahRows(e.target.dataset.r, q);
   const vs = $('#qvoices');
-  if (vs) vs.innerHTML = voiceChips(q);
+  if (vs) { vs.innerHTML = voiceChips(q); searchText(q); }
 });
 
 document.addEventListener('keydown', (e) => {
@@ -796,7 +897,11 @@ document.addEventListener('keydown', (e) => {
 
 window.addEventListener('hashchange', () => { closeSheet(); render(); if (!/^#\/lire\/\d+\/\d+/.test(location.hash)) window.scrollTo(0, 0); });
 window.addEventListener('pagehide', () => ls.set('nun.stats', stats));
-setInterval(() => { if (prefs.theme === 'auto') applyTheme(); }, 60000);
+setInterval(() => {
+  if (prefs.theme === 'auto') applyTheme();
+  const np = nextPrayer(), el = $('#pleft');
+  if (np && el) el.textContent = `dans ${leftLabel(np.left)}`;
+}, 60000);
 render();
 
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {

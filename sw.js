@@ -1,6 +1,6 @@
 // Service worker : l'app et les textes déjà ouverts restent disponibles hors-ligne.
 // L'audio n'est pas géré ici : l'app le range elle-même dans le cache « nun-audio » quand on télécharge une sourate.
-const SHELL = 'nun-shell-v5';
+const SHELL = 'nun-shell-v6';
 const ASSETS = [
   './', 'index.html', 'styles.css', 'app.js', 'data.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
