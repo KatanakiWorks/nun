@@ -317,6 +317,15 @@ function contTick(t) {
   updateMedia();
 }
 
+// Précédent / suivant changent de sourate (comme des titres) ; « précédent » revient d'abord au début si on est déjà avancé.
+function skipSurah(dir) {
+  const cur = st.r ? st : last;
+  if (!cur) return;
+  if (!st.r) return play(cur.r, cur.s, cur.i);
+  if (dir < 0 && (st.i > 0 || A().currentTime > 3)) return play(st.r, st.s, 0);
+  const s = st.s + dir;
+  if (s >= 1 && s <= 114) play(st.r, s);
+}
 function goAyah(i) {
   if (!st.r) return;
   const n = VERSES[st.s - 1];
@@ -398,8 +407,8 @@ if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
   ms.setActionHandler('play', () => toggle());
   ms.setActionHandler('pause', () => A().pause());
-  ms.setActionHandler('previoustrack', () => goAyah(st.i - 1));
-  ms.setActionHandler('nexttrack', () => goAyah(st.i + 1));
+  ms.setActionHandler('previoustrack', () => skipSurah(-1));
+  ms.setActionHandler('nexttrack', () => skipSurah(1));
 }
 
 // ---------- Partage, copie, carte image ----------
@@ -753,7 +762,7 @@ function renderDock(route) {
       ${cur ? `<button class="open" data-act="open" aria-label="${T`Ouvrir le lecteur`}"></button>
       ${surahArt(cur.s)}
       <span class="t"><b>${st.r && st.cont && !st.tm ? NAMES_LATIN[cur.s - 1] : T`${NAMES_LATIN[cur.s - 1]} · verset ${cur.i + 1}`}</b><small>${esc(RBY[cur.r].name)}</small></span>
-      <span class="ctrls"><button data-act="prev" aria-label="${T`Verset précédent`}">${I.prev}</button><button class="pp" data-act="toggle" aria-label="${playing ? T`Pause` : T`Lancer la lecture`}">${playing ? I.pause : I.play}</button><button data-act="next" aria-label="${T`Verset suivant`}">${I.next}</button></span>
+      <span class="ctrls"><button data-act="prev" aria-label="${T`Sourate précédente`}">${I.prev}</button><button class="pp" data-act="toggle" aria-label="${playing ? T`Pause` : T`Lancer la lecture`}">${playing ? I.pause : I.play}</button><button data-act="next" aria-label="${T`Sourate suivante`}">${I.next}</button></span>
       <button class="pp" data-act="toggle" aria-label="${playing ? T`Pause` : T`Lancer la lecture`}">${playing ? I.pause : I.play}</button>
       <button class="imm only-desk" data-act="open">${I.full}${T`Immersion`}</button>
       <span class="bar"><i class="js-fill"></i></span>` : ''}
@@ -797,15 +806,15 @@ function renderPlayer() {
           <span class="js-dur">${noSync ? '' : n}</span></div>
       </div>
       <div class="transport">
-        <button data-act="prev" aria-label="${T`Verset précédent`}">${I.prev}</button>
+        <button class="tside" data-act="rate" aria-label="${T`Vitesse de lecture ${prefs.rate} fois`}">${prefs.ui === 'en' ? prefs.rate : String(prefs.rate).replace('.', ',')}×</button>
+        <button data-act="prev" aria-label="${T`Sourate précédente`}">${I.prev}</button>
         <button class="main" data-act="toggle" aria-label="${paused ? T`Lancer la lecture` : T`Pause`}">${paused ? I.play : I.pause}</button>
-        <button data-act="next" aria-label="${T`Verset suivant`}">${I.next}</button>
+        <button data-act="next" aria-label="${T`Sourate suivante`}">${I.next}</button>
+        <button class="tside" data-act="timer" aria-pressed="${!!st.timer}" aria-label="${st.timer ? T`Arrêt dans ${st.timer} min` : T`Minuteur`}">${I.timer}${st.timer ? `<span class="badge">${st.timer}</span>` : ''}</button>
       </div>
       <div class="p-extra">
         ${noSync ? '' : `<button class="chip only-desk" data-act="rep" aria-pressed="${st.rep > 1}">${I.repeat}${T`Répéter ×${st.rep}`}</button>`}
         <button class="chip only-desk" data-act="flip" data-k="tr" aria-pressed="${prefs.tr}">${I.bubble}${T`Traduction`}</button>
-        <button class="chip" data-act="rate" aria-label="${T`Vitesse de lecture ${prefs.rate} fois`}">${T`Vitesse ${prefs.ui === 'en' ? prefs.rate : String(prefs.rate).replace('.', ',')}×`}</button>
-        <button class="chip" data-act="timer" aria-pressed="${!!st.timer}">${I.timer}${st.timer ? T`Arrêt dans ${st.timer} min` : T`Minuteur`}</button>
         <button class="chip only-desk" data-act="close-go" data-href="#/lire/${cur.s}/${cur.i + 1}">${I.book}${T`Lire`}</button>
       </div>
     </div>`;
@@ -973,8 +982,8 @@ document.addEventListener('click', async (e) => {
     case 'play': play(d.r || (st.r && route !== 'recherche' ? st.r : prefs.reciter), s); break;
     case 'playv': closeSheet(); play(st.r || prefs.reciter, s, i); break;
     case 'toggle': toggle(); break;
-    case 'prev': goAyah(st.pre ? -1 : st.i - 1); break;
-    case 'next': goAyah(st.pre ? 0 : st.i + 1); break;
+    case 'prev': skipSurah(-1); break;
+    case 'next': skipSurah(1); break;
     case 'rep': setRep(); break;
     case 'rate': {
       const R = [0.75, 1, 1.25, 1.5];
@@ -1161,7 +1170,7 @@ document.addEventListener('touchend', (e) => {
   if (zone.matches('#player') && down) return closePlayer();
   if (horiz) {
     if (!st.r) return;
-    goAyah(dx < 0 ? (st.pre ? 0 : st.i + 1) : (st.pre ? -1 : st.i - 1));
+    skipSurah(dx < 0 ? 1 : -1);
     if (navigator.vibrate) navigator.vibrate(8);
     return;
   }

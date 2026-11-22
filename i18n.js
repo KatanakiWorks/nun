@@ -151,8 +151,8 @@ export const EN = {
   'Lecteur': 'Player',
   'Ouvrir le lecteur': 'Open the player',
   'Fermer le lecteur': 'Close the player',
-  'Verset précédent': 'Previous verse',
-  'Verset suivant': 'Next verse',
+  'Sourate précédente': 'Previous surah',
+  'Sourate suivante': 'Next surah',
   'Pause': 'Pause',
   'Lancer la lecture': 'Play',
   'Immersion': 'Immersive',
@@ -168,7 +168,6 @@ export const EN = {
   'Position dans la sourate': 'Position in the surah',
   'Répéter ×{}': 'Repeat ×{}',
   'Vitesse de lecture {} fois': 'Playback speed {} times',
-  'Vitesse {}×': 'Speed {}×',
   'Arrêt dans {} min': 'Stops in {} min',
   'Minuteur': 'Sleep timer',
 

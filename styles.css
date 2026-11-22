@@ -242,8 +242,13 @@ h2.two { font-size: 28px; letter-spacing: -.9px; }
 .scrub .track::before { content: ''; position: absolute; inset: -14px 0; }
 .scrub .fill { position: absolute; left: 0; top: 0; height: 3px; border-radius: 2px; background: var(--amber); }
 .scrub .knob { position: absolute; top: -5px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 10px rgba(242,179,122,.8); }
-.transport { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.transport button { height: 76px; border-radius: 26px; background: var(--surface); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.transport { display: grid; grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr) 48px; align-items: center; gap: 8px; }
+.transport button { height: 64px; border-radius: 24px; background: var(--surface); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.transport .main { height: 76px; border-radius: 28px; }
+/* Vitesse et minuteur, de part et d'autre des commandes */
+.transport .tside { position: relative; width: 48px; height: 48px; border-radius: 50%; background: none; border: 1px solid var(--line); color: var(--ink); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.transport .tside svg { width: 20px; height: 20px; }
+.transport .tside[aria-pressed="true"] { background: var(--soft); color: var(--accent); border-color: transparent; }
 .transport button svg { width: 24px; height: 24px; }
 .transport .main { background: var(--grad); color: var(--on-grad); box-shadow: 0 10px 30px var(--btn-glow); }
 .p-extra { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -319,7 +324,8 @@ h2.two { font-size: 28px; letter-spacing: -.9px; }
   .p-verse { text-align: right; }
   .p-verse .arv { font-size: 38px; }
   .p-verse .fr { font-size: 18px; text-align: left; }
-  .transport button { height: 84px; border-radius: 28px; }
+  .transport button:not(.tside) { height: 76px; border-radius: 28px; }
+  .transport .main { height: 88px; }
 }
 
 /* Horaires de prière */
